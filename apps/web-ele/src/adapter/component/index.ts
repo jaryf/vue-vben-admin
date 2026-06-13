@@ -4,6 +4,7 @@
  */
 
 import type {
+  AutocompleteProps,
   CheckboxGroupProps,
   CheckboxProps,
   DatePickerProps,
@@ -18,22 +19,19 @@ import type {
   SwitchProps,
   UploadProps,
 } from 'element-plus';
+import {ElNotification} from 'element-plus';
 
-import type { Component } from 'vue';
+import type {Component} from 'vue';
+import {defineAsyncComponent, defineComponent, h, ref} from 'vue';
 
 import type {
   ApiComponentSharedProps,
   BaseFormComponentType,
   IconPickerProps,
 } from '@vben/common-ui';
-import type { Recordable } from '@vben/types';
-
-import { defineAsyncComponent, defineComponent, h, ref } from 'vue';
-
-import { ApiComponent, globalShareState, IconPicker } from '@vben/common-ui';
-import { $t } from '@vben/locales';
-
-import { ElNotification } from 'element-plus';
+import {ApiComponent, globalShareState, IconPicker} from '@vben/common-ui';
+import type {Recordable} from '@vben/types';
+import {$t} from '@vben/locales';
 
 type ElTreeSelectSchemaProps = InstanceType<typeof ElTreeSelectType>['$props'];
 type ElTimePickerSchemaProps = InstanceType<typeof ElTimePickerType>['$props'];
@@ -43,6 +41,12 @@ const ElButton = defineAsyncComponent(() =>
     import('element-plus/es/components/button/index'),
     import('element-plus/es/components/button/style/css'),
   ]).then(([res]) => res.ElButton),
+);
+const ElAutocomplete = defineAsyncComponent(() =>
+  Promise.all([
+    import('element-plus/es/components/autocomplete/index'),
+    import('element-plus/es/components/autocomplete/style/css'),
+  ]).then(([res]) => res.ElAutocomplete),
 );
 const ElCheckbox = defineAsyncComponent(() =>
   Promise.all([
@@ -179,6 +183,7 @@ const withDefaultPlaceholder = (
 export type ComponentType =
   | 'ApiSelect'
   | 'ApiTreeSelect'
+  | 'AutoComplete'
   | 'Checkbox'
   | 'CheckboxGroup'
   | 'DatePicker'
@@ -187,9 +192,11 @@ export type ComponentType =
   | 'Input'
   | 'InputNumber'
   | 'RadioGroup'
+  | 'RangePicker'
   | 'Select'
   | 'Space'
   | 'Switch'
+  | 'Textarea'
   | 'TimePicker'
   | 'TreeSelect'
   | 'Upload'
@@ -201,6 +208,7 @@ export type ComponentType =
 export interface ComponentPropsMap {
   ApiSelect: ApiComponentSharedProps & SelectV2Props;
   ApiTreeSelect: ApiComponentSharedProps & ElTreeSelectSchemaProps;
+  AutoComplete: AutocompleteProps;
   Checkbox: CheckboxProps;
   CheckboxGroup: CheckboxGroupProps;
   DatePicker: DatePickerProps;
@@ -209,9 +217,11 @@ export interface ComponentPropsMap {
   Input: InputProps;
   InputNumber: InputNumberProps;
   RadioGroup: RadioGroupProps;
+  RangePicker: DatePickerProps;
   Select: SelectV2Props;
   Space: SpaceProps;
   Switch: SwitchProps;
+  Textarea: InputProps;
   TimePicker: ElTimePickerSchemaProps;
   TreeSelect: ElTreeSelectSchemaProps;
   Upload: UploadProps;
@@ -249,6 +259,7 @@ async function initComponentAdapter() {
         visibleEvent: 'onVisibleChange',
       },
     ),
+    AutoComplete: withDefaultPlaceholder(ElAutocomplete, 'input'),
     Checkbox: ElCheckbox,
     CheckboxGroup: (props, { attrs, slots }) => {
       let defaultSlot;
@@ -353,6 +364,29 @@ async function initComponentAdapter() {
         slots,
       );
     },
+    RangePicker: (props, { attrs, slots }) => {
+      const { name, id } = props;
+      const extraProps: Recordable<any> = {};
+      if (name && !Array.isArray(name)) {
+        extraProps.name = [name, `${name}_end`];
+      }
+      if (id && !Array.isArray(id)) {
+        extraProps.id = [id, `${id}_end`];
+      }
+      return h(
+        ElDatePicker,
+        {
+          type: 'daterange',
+          ...props,
+          ...attrs,
+          ...extraProps,
+        },
+        slots,
+      );
+    },
+    Textarea: withDefaultPlaceholder(ElInput, 'input', {
+      type: 'textarea',
+    }),
     TreeSelect: withDefaultPlaceholder(ElTreeSelect, 'select'),
     Upload: ElUpload,
   };
