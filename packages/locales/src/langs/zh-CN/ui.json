@@ -54,6 +54,10 @@
     "copy": "复制",
     "copied": "已复制"
   },
+  "copy": {
+    "success": "复制成功",
+    "failed": "复制失败"
+  },
   "crop": {
     "title": "图片裁剪",
     "titleTip": "裁剪比例 {0}",

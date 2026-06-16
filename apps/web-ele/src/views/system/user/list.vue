@@ -196,9 +196,9 @@ watch(inputSearchValue, (value) => {
       <div class="w-5/6 ml-4">
         <Grid :table-title="$t('system.user.list')">
           <template #toolbar-tools>
-            <ElButton type="primary" @click="onCreate">
+            <ElButton type="success" @click="onCreate">
               <Plus class="size-5" />
-              {{ $t('ui.actionTitle.create', [$t('system.user.name')]) }}
+              {{ $t('ui.actionTitle.create') }}
             </ElButton>
           </template>
           <template #action="{ row }">

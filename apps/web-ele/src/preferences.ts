@@ -258,11 +258,11 @@ export const overridesPreferences = defineOverridesPreferences({
   /** 功能配置 */
   widget: {
     /** 是否启用全屏部件。允许值：true | false */
-    fullscreen: false,
+    fullscreen: true,
     /** 是否启用全局搜索部件。允许值：true | false */
     globalSearch: true,
     /** 是否启用语言切换部件。允许值：true | false */
-    languageToggle: false,
+    languageToggle: true,
     /** 是否开启锁屏功能。允许值：true | false */
     lockScreen: true,
     /** 是否显示通知部件。允许值：true | false */
@@ -270,7 +270,7 @@ export const overridesPreferences = defineOverridesPreferences({
     /** 显示刷新按钮。允许值：true | false */
     refresh: true,
     /** 是否显示侧边栏显示/隐藏部件。允许值：true | false */
-    sidebarToggle: false,
+    sidebarToggle: true,
     /** 是否显示主题切换部件。允许值：true | false */
     themeToggle: true,
     /** 是否显示时区部件。允许值：true | false */

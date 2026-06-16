@@ -60,7 +60,6 @@ export function useGridFormSchema(): VbenFormSchema[] {
       fieldName: 'name',
       label: $t('system.user.name'),
     },
-    { component: 'Input', fieldName: 'id', label: $t('system.user.id') },
     {
       component: 'Select',
       componentProps: {
@@ -72,16 +71,6 @@ export function useGridFormSchema(): VbenFormSchema[] {
       },
       fieldName: 'status',
       label: $t('system.user.status'),
-    },
-    {
-      component: 'Input',
-      fieldName: 'remark',
-      label: $t('system.user.remark'),
-    },
-    {
-      component: 'RangePicker',
-      fieldName: 'createTime',
-      label: $t('system.user.createTime'),
     },
   ];
 }
@@ -122,14 +111,17 @@ export function useColumns<T = SystemUserApi.SystemUser>(
 ): VxeTableGridColumns {
   return [
     {
-      field: 'name',
+      cellRender: {
+        name: 'CellCopyText',
+      },
+      field: 'username',
       title: $t('system.user.name'),
-      minWidth: 200,
+      width: 200,
     },
     {
       field: 'id',
       title: $t('system.user.id'),
-      minWidth: 200,
+      width: 200,
     },
     {
       cellRender: {
@@ -138,17 +130,20 @@ export function useColumns<T = SystemUserApi.SystemUser>(
       },
       field: 'status',
       title: $t('system.user.status'),
-      minWidth: 100,
+      width: 100,
     },
     {
+      cellRender: {
+        name: 'CellCopyText',
+      },
       field: 'remark',
       minWidth: 100,
       title: $t('system.user.remark'),
     },
     {
-      field: 'createTime',
+      field: 'createdAt',
       title: $t('system.user.createTime'),
-      width: 200,
+      width: 160,
     },
     {
       align: 'center',
@@ -156,7 +151,7 @@ export function useColumns<T = SystemUserApi.SystemUser>(
       fixed: 'right',
       slots: { default: 'action' },
       title: $t('system.user.operation'),
-      minWidth: 180,
+      width: 260,
     },
   ];
 }

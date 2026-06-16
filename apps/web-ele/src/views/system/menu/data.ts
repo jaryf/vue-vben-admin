@@ -42,12 +42,18 @@ export function useColumns(
       width: 100,
     },
     {
+      cellRender: {
+        name: 'CellCopyText',
+      },
       field: 'authCode',
       title: $t('system.menu.authCode'),
       minWidth: 200,
     },
     {
       align: 'left',
+      cellRender: {
+        name: 'CellCopyText',
+      },
       field: 'path',
       title: $t('system.menu.path'),
       minWidth: 200,

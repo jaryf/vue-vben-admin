@@ -54,6 +54,10 @@
     "copy": "Copy",
     "copied": "Copied"
   },
+  "copy": {
+    "success": "Copied successfully",
+    "failed": "Copy failed"
+  },
   "crop": {
     "title": "Image Cropping",
     "titleTip": "Cropping Ratio {0}",

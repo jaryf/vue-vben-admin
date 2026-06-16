@@ -6,7 +6,7 @@ import type {Recordable} from '@vben/types';
 
 import type {ComponentPropsMap, ComponentType} from './component';
 
-import {defineComponent, h} from 'vue';
+import {defineComponent, h, ref} from 'vue';
 
 import {useAccess} from '@vben/access';
 import {IconifyIcon} from '@vben/icons';
@@ -14,7 +14,7 @@ import {$te} from '@vben/locales';
 import {get, isFunction, isString} from '@vben/utils';
 
 import {objectOmit} from '@vueuse/core';
-import {ElButton, ElImage, ElPopconfirm, ElSwitch, ElTag} from 'element-plus';
+import {ElButton, ElImage, ElMessage, ElPopconfirm, ElSwitch, ElTag, ElTooltip} from 'element-plus';
 
 import {$t} from '#/locales';
 
@@ -282,6 +282,55 @@ setupVbenVxeTable({
             style: { justifyContent: align },
           },
           btns,
+        );
+      },
+    });
+
+    // 添加可复制文本渲染器
+    vxeUI.renderer.add('CellCopyText', {
+      renderTableDefault(_renderOpts, params) {
+        const { column, row } = params;
+        const cellValue = row[column.field];
+        const disabled = ref(true); // 默认禁用 tooltip
+
+        return h(
+          ElTooltip,
+          {
+            content: cellValue,
+            placement: 'top',
+            disabled: disabled.value,
+          },
+          {
+            default: () =>
+              h(
+                'span',
+                {
+                  class: 'vxe-cell-copy-text',
+                  style: {
+                    cursor: 'pointer',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    display: 'inline-block',
+                    maxWidth: '100%',
+                  },
+                  onClick: async () => {
+                    try {
+                      await navigator.clipboard.writeText(cellValue || '');
+                      ElMessage.success($t('ui.copy.success'));
+                    } catch {
+                      ElMessage.error($t('ui.copy.failed'));
+                    }
+                  },
+                  onMouseenter: (e: MouseEvent) => {
+                    const target = e.currentTarget as HTMLElement;
+                    // 判断文本是否溢出
+                    disabled.value = target.scrollWidth <= target.clientWidth;
+                  },
+                },
+                cellValue,
+              ),
+          },
         );
       },
     });
