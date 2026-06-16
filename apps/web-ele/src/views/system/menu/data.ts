@@ -39,7 +39,7 @@ export function useColumns(
       cellRender: { name: 'CellTag', options: getMenuTypeOptions() },
       field: 'type',
       title: $t('system.menu.type'),
-      minWidth: 100,
+      width: 100,
     },
     {
       field: 'authCode',
@@ -77,11 +77,10 @@ export function useColumns(
       cellRender: { name: 'CellTag' },
       field: 'status',
       title: $t('system.menu.status'),
-      minWidth: 100,
+      width: 100,
     },
-
     {
-      align: 'right',
+      align: 'center',
       cellRender: {
         attrs: {
           nameField: 'name',
@@ -102,7 +101,7 @@ export function useColumns(
       headerAlign: 'center',
       showOverflow: false,
       title: $t('system.menu.operation'),
-      minWidth: 200,
+      width: 260,
     },
   ];
 }

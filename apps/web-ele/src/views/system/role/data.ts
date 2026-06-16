@@ -60,16 +60,6 @@ export function useGridFormSchema(): VbenFormSchema[] {
       fieldName: 'status',
       label: $t('system.role.status'),
     },
-    {
-      component: 'Input',
-      fieldName: 'remark',
-      label: $t('system.role.remark'),
-    },
-    {
-      component: 'RangePicker',
-      fieldName: 'createTime',
-      label: $t('system.role.createTime'),
-    },
   ];
 }
 
@@ -79,23 +69,25 @@ export function useColumns<T = SystemRoleApi.SystemRole>(
 ): VxeTableGridColumns {
   return [
     {
-      field: 'name',
-      title: $t('system.role.roleName'),
-      minWidth: 200,
-    },
-    {
       field: 'id',
       title: $t('system.role.id'),
       minWidth: 200,
     },
     {
+      field: 'name',
+      title: $t('system.role.roleName'),
+      minWidth: 200,
+    },
+    {
       cellRender: {
-        attrs: { beforeChange: onStatusChange },
+        attrs: {
+          beforeChange: onStatusChange,
+        },
         name: onStatusChange ? 'CellSwitch' : 'CellTag',
       },
       field: 'status',
       title: $t('system.role.status'),
-      minWidth: 160,
+      width: 220,
     },
     {
       field: 'remark',
@@ -103,7 +95,7 @@ export function useColumns<T = SystemRoleApi.SystemRole>(
       title: $t('system.role.remark'),
     },
     {
-      field: 'createTime',
+      field: 'createdAt',
       title: $t('system.role.createTime'),
       width: 200,
     },
@@ -120,7 +112,7 @@ export function useColumns<T = SystemRoleApi.SystemRole>(
       field: 'operation',
       fixed: 'right',
       title: $t('system.role.operation'),
-      minWidth: 130,
+      width: 260,
     },
   ];
 }

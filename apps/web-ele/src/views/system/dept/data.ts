@@ -88,12 +88,12 @@ export function useColumns(
       cellRender: { name: 'CellTag' },
       field: 'status',
       title: $t('system.dept.status'),
-      minWidth: 160,
+      width: 100,
     },
     {
-      field: 'createTime',
+      field: 'createdAt',
       title: $t('system.dept.createTime'),
-      minWidth: 180,
+      width: 160,
     },
     {
       field: 'remark',
@@ -101,7 +101,7 @@ export function useColumns(
       minWidth: 180,
     },
     {
-      align: 'right',
+      align: 'center',
       cellRender: {
         attrs: {
           nameField: 'name',
@@ -126,9 +126,8 @@ export function useColumns(
       field: 'operation',
       fixed: 'right',
       headerAlign: 'center',
-      showOverflow: false,
       title: $t('system.dept.operation'),
-      width: 280,
+      width: 264,
     },
   ];
 }

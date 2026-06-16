@@ -126,6 +126,7 @@ setupVbenVxeTable({
           activeValue: 1,
           inactiveText: $t('common.disabled'),
           inactiveValue: 0,
+          inlinePrompt: true,
           ...props,
           loading: row[loadingKey] ?? false,
           modelValue: row[column.field],
