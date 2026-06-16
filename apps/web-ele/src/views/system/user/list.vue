@@ -95,7 +95,7 @@ async function onStatusChange(
   };
   try {
     await confirm(
-      `你要将${row.name}的状态切换为 【${status[newStatus.toString()]}】 吗？`,
+      `你要将${row.username}的状态切换为 【${status[newStatus.toString()]}】 吗？`,
       `切换状态`,
     );
     await updateUser(row.id, { status: newStatus });

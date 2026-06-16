@@ -10,7 +10,7 @@ export const overridesPreferences = defineOverridesPreferences({
   /** 全局配置 */
   app: {
     /** 权限模式。允许值：'backend' | 'frontend' | 'mixed' */
-    accessMode: 'frontend',
+    accessMode: 'backend',
     /** 登录注册页面布局。允许值：'panel-center' | 'panel-left' | 'panel-right' */
     authPageLayout: 'panel-right',
     /** 检查更新轮询时间。允许值：number */
