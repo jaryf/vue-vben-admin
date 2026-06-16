@@ -137,40 +137,67 @@ function getBadgeType(
         </ElButton>
       </template>
       <template #title="{ row }">
-        <div class="flex w-full items-center gap-1">
-          <div class="size-5 shrink-0">
-            <IconifyIcon
-              v-if="row.type === 'button'"
-              class="size-full"
-              icon="carbon:security"
-            />
-            <IconifyIcon
-              v-else-if="row.meta?.icon"
-              :icon="row.meta?.icon || 'carbon:circle-dash'"
-              class="size-full"
-            />
+        <div class="menu-title-cell">
+          <div class="menu-title-content">
+            <div class="size-5 shrink-0">
+              <IconifyIcon
+                v-if="row.type === 'button'"
+                class="size-full"
+                icon="carbon:security"
+              />
+              <IconifyIcon
+                v-else-if="row.meta?.icon"
+                :icon="row.meta?.icon || 'carbon:circle-dash'"
+                class="size-full"
+              />
+            </div>
+            <span class="menu-title-text">{{ $t(row.meta?.title) }}</span>
           </div>
-          <span class="flex-auto">{{ $t(row.meta?.title) }}</span>
-          <div class="items-center justify-end"></div>
+          <ElBadge
+            v-if="row.meta?.badgeType"
+            :is-dot="row.meta.badgeType === 'dot'"
+            :type="getBadgeType(row.meta.badgeVariants)"
+            :value="row.meta.badgeType === 'normal' ? row.meta.badge : ''"
+            class="menu-badge"
+          />
         </div>
-        <ElBadge
-          v-if="row.meta?.badgeType"
-          :is-dot="row.meta.badgeType === 'dot'"
-          :type="getBadgeType(row.meta.badgeVariants)"
-          :value="row.meta.badgeType === 'normal' ? row.meta.badge : ''"
-          class="menu-badge"
-        />
       </template>
     </Grid>
   </Page>
 </template>
 <style lang="scss" scoped>
-.menu-badge {
-  top: 50%;
-  right: 0;
-  transform: translateY(-50%);
+.menu-title-cell {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  gap: 8px;
+}
 
-  & > :deep(div) {
+.menu-title-content {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  min-width: 0;
+  gap: 4px;
+}
+
+.menu-title-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-badge {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  line-height: 1;
+
+  :deep(.el-badge__content) {
+    position: static;
+    transform: none;
     padding-top: 0;
     padding-bottom: 0;
   }

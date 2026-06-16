@@ -38,7 +38,7 @@ export const overridesPreferences = defineOverridesPreferences({
     /** 应用默认头像。允许值：string */
     defaultAvatar: '/images/avatar.svg',
     /** 默认首页地址。允许值：string */
-    defaultHomePath: '/analytics',
+    defaultHomePath: '/workspace',
     /** 开启动态标题。允许值：true | false */
     dynamicTitle: true,
     /** 是否开启检查更新。允许值：true | false */
