@@ -1,19 +1,19 @@
 <script lang="ts" setup>
-import type {Recordable} from '@vben/types';
+import type { Recordable } from '@vben/types';
 
-import type {SystemRoleApi} from '#/api/system/role';
-import {createRole, updateRole} from '#/api/system/role';
+import type { SystemRoleApi } from '#/api/system/role';
+import { createRole, updateRole } from '#/api/system/role';
 
-import {computed, nextTick, ref} from 'vue';
+import { computed, nextTick, ref } from 'vue';
 
-import {Tree, useVbenDrawer} from '@vben/common-ui';
-import {IconifyIcon} from '@vben/icons';
+import { Tree, useVbenDrawer } from '@vben/common-ui';
+import { IconifyIcon } from '@vben/icons';
 
-import {useVbenForm} from '#/adapter/form';
-import {getMenuList} from '#/api/system/menu';
-import {$t} from '#/locales';
+import { useVbenForm } from '#/adapter/form';
+import { getMenuList } from '#/api/system/menu';
+import { $t } from '#/locales';
 
-import {useFormSchema} from '../data';
+import { useFormSchema } from '../data';
 
 const emits = defineEmits(['success']);
 
@@ -96,7 +96,7 @@ function getNodeClass(node: Recordable<any>) {
 <template>
   <Drawer :title="getDrawerTitle">
     <Form>
-      <template #permissions="slotProps">
+      <template #menuIds="slotProps">
         <div v-spinning="loadingPermissions" class="w-full">
           <Tree
             :default-expanded-level="2"

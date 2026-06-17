@@ -27,7 +27,7 @@ function generateMockDataList(count: number) {
       createTime: formatterCN.format(
         faker.date.between({ from: '2022-01-01', to: '2025-01-01' }),
       ),
-      permissions: faker.helpers.arrayElements(menuIds),
+      menuIds: faker.helpers.arrayElements(menuIds),
       remark: faker.lorem.sentence(),
     };
 

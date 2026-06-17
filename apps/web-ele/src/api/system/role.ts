@@ -1,12 +1,12 @@
-import type {Recordable} from '@vben/types';
+import type { Recordable } from '@vben/types';
 
-import {requestClient} from '#/api/request';
+import { requestClient } from '#/api/request';
 
 export namespace SystemRoleApi {
   export interface SystemRole {
-    id: string;
+    id: number | string;
+    menuIds: number[];
     name: string;
-    permissions: string[];
     remark?: string;
     status: 0 | 1;
 
@@ -39,8 +39,8 @@ async function createRole(data: Omit<SystemRoleApi.SystemRole, 'id'>) {
  * @param data 角色数据
  */
 async function updateRole(
-  id: string,
-  data: Omit<SystemRoleApi.SystemRole, 'id'>,
+  id: SystemRoleApi.SystemRole['id'],
+  data: Partial<Omit<SystemRoleApi.SystemRole, 'id'>>,
 ) {
   return requestClient.put(`/system/role/${id}`, data);
 }
@@ -49,7 +49,7 @@ async function updateRole(
  * 删除角色
  * @param id 角色 ID
  */
-async function deleteRole(id: string) {
+async function deleteRole(id: SystemRoleApi.SystemRole['id']) {
   return requestClient.delete(`/system/role/${id}`);
 }
 

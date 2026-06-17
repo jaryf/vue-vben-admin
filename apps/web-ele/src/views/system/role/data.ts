@@ -1,8 +1,8 @@
-import type {VbenFormSchema} from '#/adapter/form';
-import type {OnActionClickFn, VxeTableGridColumns} from '#/adapter/vxe-table';
-import type {SystemRoleApi} from '#/api';
+import type { VbenFormSchema } from '#/adapter/form';
+import type { OnActionClickFn, VxeTableGridColumns } from '#/adapter/vxe-table';
+import type { SystemRoleApi } from '#/api';
 
-import {$t} from '#/locales';
+import { $t } from '#/locales';
 
 export function useFormSchema(): VbenFormSchema[] {
   return [
@@ -32,7 +32,7 @@ export function useFormSchema(): VbenFormSchema[] {
     },
     {
       component: 'Input',
-      fieldName: 'permissions',
+      fieldName: 'menuIds',
       formItemClass: 'items-start',
       label: $t('system.role.setPermissions'),
       modelPropName: 'modelValue',
