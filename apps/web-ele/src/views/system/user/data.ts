@@ -84,8 +84,8 @@ export function useDescriptionItems(
 ): DescriptionsItemType[] {
   const enabled = row?.status === 1;
   return [
-    { label: $t('system.user.name'), content: row?.name },
     { label: $t('system.user.id'), content: row?.id },
+    { label: $t('system.user.name'), content: row?.username },
     { label: $t('system.user.dept'), content: row?.deptId },
     {
       label: $t('system.user.status'),
@@ -101,7 +101,7 @@ export function useDescriptionItems(
           },
         ),
     },
-    { label: $t('system.user.createTime'), content: row?.createTime },
+    { label: $t('system.user.createTime'), content: row?.createdAt },
     { label: $t('system.user.remark'), content: row?.remark },
   ];
 }
@@ -116,12 +116,12 @@ export function useColumns<T = SystemUserApi.SystemUser>(
       },
       field: 'username',
       title: $t('system.user.name'),
-      width: 200,
+      minWidth: 200,
     },
     {
       field: 'id',
       title: $t('system.user.id'),
-      width: 200,
+      minWidth: 80,
     },
     {
       cellRender: {
@@ -130,7 +130,7 @@ export function useColumns<T = SystemUserApi.SystemUser>(
       },
       field: 'status',
       title: $t('system.user.status'),
-      width: 100,
+      minWidth: 100,
     },
     {
       cellRender: {
@@ -151,7 +151,7 @@ export function useColumns<T = SystemUserApi.SystemUser>(
       fixed: 'right',
       slots: { default: 'action' },
       title: $t('system.user.operation'),
-      width: 260,
+      width: 160,
     },
   ];
 }

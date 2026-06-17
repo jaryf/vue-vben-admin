@@ -91,14 +91,14 @@ export function useColumns(
       width: 100,
     },
     {
-      field: 'createdAt',
-      title: $t('system.dept.createTime'),
-      width: 160,
-    },
-    {
       field: 'remark',
       title: $t('system.dept.remark'),
       minWidth: 180,
+    },
+    {
+      field: 'createdAt',
+      title: $t('system.dept.createTime'),
+      width: 160,
     },
     {
       align: 'center',

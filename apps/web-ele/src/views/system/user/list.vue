@@ -22,6 +22,10 @@ const deptList = ref<SystemDeptApi.SystemDept[]>([]);
 const inputSearchValue = ref('');
 const selectedDeptId = ref<string>('');
 
+type DeptTreeSelectItem = {
+  value: SystemDeptApi.SystemDept;
+};
+
 const [FormDrawer, formDrawerApi] = useVbenDrawer({
   connectedComponent: Form,
   destroyOnClose: true,
@@ -149,8 +153,8 @@ async function loadDeptList() {
   }
 }
 
-function selectDept(v: string) {
-  selectedDeptId.value = v;
+function selectDept(item: DeptTreeSelectItem) {
+  selectedDeptId.value = String(item.value.id);
   gridApi.query();
 }
 
