@@ -1,20 +1,24 @@
-import type {DescriptionsItemType} from '@vben/common-ui';
+import type { DescriptionsItemType } from '@vben/common-ui';
 
-import type {VbenFormSchema} from '#/adapter/form';
-import type {VxeTableGridColumns} from '#/adapter/vxe-table';
-import type {SystemUserApi} from '#/api';
-import {getDeptList} from '#/api';
+import type { VbenFormSchema } from '#/adapter/form';
+import type { VxeTableGridColumns } from '#/adapter/vxe-table';
+import type { SystemUserApi } from '#/api';
 
-import {h} from 'vue';
+import { h } from 'vue';
 
-import {ElTag} from 'element-plus';
-import {$t} from '#/locales';
+import { ElTag } from 'element-plus';
+
+import { getDeptList } from '#/api';
+import { $t } from '#/locales';
 
 export function useFormSchema(): VbenFormSchema[] {
   return [
     {
       component: 'Input',
-      fieldName: 'name',
+      componentProps: {
+        clearable: true,
+      },
+      fieldName: 'username',
       label: $t('system.user.name'),
       rules: 'required',
     },
@@ -57,7 +61,10 @@ export function useGridFormSchema(): VbenFormSchema[] {
   return [
     {
       component: 'Input',
-      fieldName: 'name',
+      componentProps: {
+        clearable: true,
+      },
+      fieldName: 'username',
       label: $t('system.user.name'),
     },
     {
@@ -111,17 +118,17 @@ export function useColumns<T = SystemUserApi.SystemUser>(
 ): VxeTableGridColumns {
   return [
     {
+      field: 'id',
+      title: $t('system.user.id'),
+      minWidth: 80,
+    },
+    {
       cellRender: {
         name: 'CellCopyText',
       },
       field: 'username',
       title: $t('system.user.name'),
       minWidth: 200,
-    },
-    {
-      field: 'id',
-      title: $t('system.user.id'),
-      minWidth: 80,
     },
     {
       cellRender: {
