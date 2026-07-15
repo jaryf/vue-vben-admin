@@ -1,3 +1,5 @@
+import type {SystemStatus} from '#/constants/system';
+
 import {requestClient} from '#/api/request';
 
 export namespace SystemDeptApi {
@@ -6,7 +8,7 @@ export namespace SystemDeptApi {
     id: string;
     name: string;
     remark?: string;
-    status: 0 | 1;
+    status: SystemStatus;
 
     [key: string]: any;
   }

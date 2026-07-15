@@ -1,7 +1,5 @@
 import type {TableActionProps} from '@vben/common-ui';
-import {VbenTableAction as VbenTableActionCore} from '@vben/common-ui';
 import type {VxeTableGridOptions} from '@vben/plugins/vxe-table';
-import {setupVbenVxeTable, useVbenVxeGrid as useGrid,} from '@vben/plugins/vxe-table';
 import type {Recordable} from '@vben/types';
 
 import type {ComponentPropsMap, ComponentType} from './component';
@@ -9,13 +7,27 @@ import type {ComponentPropsMap, ComponentType} from './component';
 import {defineComponent, h, ref} from 'vue';
 
 import {useAccess} from '@vben/access';
+import {VbenTableAction as VbenTableActionCore} from '@vben/common-ui';
 import {IconifyIcon} from '@vben/icons';
 import {$te} from '@vben/locales';
+import {
+  setupVbenVxeTable,
+  useVbenVxeGrid as useGrid,
+} from '@vben/plugins/vxe-table';
 import {get, isFunction, isString} from '@vben/utils';
 
 import {objectOmit} from '@vueuse/core';
-import {ElButton, ElImage, ElMessage, ElPopconfirm, ElSwitch, ElTag, ElTooltip} from 'element-plus';
+import {
+  ElButton,
+  ElImage,
+  ElMessage,
+  ElPopconfirm,
+  ElSwitch,
+  ElTag,
+  ElTooltip,
+} from 'element-plus';
 
+import {getSystemStatusOptions, SYSTEM_STATUS} from '#/constants/system';
 import {$t} from '#/locales';
 
 import {useVbenForm} from './form';
@@ -152,7 +164,7 @@ setupVbenVxeTable({
     /**
      * 标签单元格渲染器。
      *
-     * 默认将 `1` 渲染为启用、`0` 渲染为禁用。
+     * 默认将 `1` 渲染为正常、`2` 渲染为异常。
      * 页面可以通过 `cellRender.options` 传入自定义枚举：
      * `{ label, value, type, color }`。
      */
@@ -161,10 +173,7 @@ setupVbenVxeTable({
         // 使用 get 支持 `a.b.c` 这类嵌套字段路径。
         const value = get(row, column.field);
         // 未配置 options 时，按常见启用/禁用状态兜底。
-        const tagOptions = options ?? [
-          { label: $t('common.enabled'), type: 'success', value: 1 },
-          { label: $t('common.disabled'), type: 'danger', value: 0 },
-        ];
+        const tagOptions = options ?? getSystemStatusOptions();
         // 按当前单元格值找到对应枚举项。
         const tagItem = tagOptions.find((item) => item.value === value);
         /**
@@ -198,10 +207,10 @@ setupVbenVxeTable({
         const loadingKey = `__loading_${column.field}`;
         const switchProps = {
           // 默认使用应用内通用启用/禁用文案和值。
-          activeText: $t('common.enabled'),
-          activeValue: 1,
-          inactiveText: $t('common.disabled'),
-          inactiveValue: 0,
+          activeText: $t('system.statusNormal'),
+          activeValue: SYSTEM_STATUS.NORMAL,
+          inactiveText: $t('system.statusAbnormal'),
+          inactiveValue: SYSTEM_STATUS.ABNORMAL,
           inlinePrompt: true,
           ...props,
           loading: row[loadingKey] ?? false,
@@ -501,8 +510,8 @@ export const VbenTableAction = defineComponent(
       h(VbenTableActionCore, { hasPermission, ...props, ...attrs }, slots);
   },
   {
-    inheritAttrs: false,
     name: 'VbenTableAction',
+    inheritAttrs: false,
   },
 );
 

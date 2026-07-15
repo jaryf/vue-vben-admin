@@ -2,7 +2,6 @@
 import type {Recordable} from '@vben/types';
 
 import type {VbenFormSchema} from '#/adapter/form';
-import {useVbenForm, z} from '#/adapter/form';
 
 import {computed, h, ref} from 'vue';
 
@@ -11,6 +10,8 @@ import {IconifyIcon} from '@vben/icons';
 import {$te} from '@vben/locales';
 
 import {breakpointsTailwind, useBreakpoints} from '@vueuse/core';
+
+import {useVbenForm, z} from '#/adapter/form';
 import {
   createMenu,
   getMenuList,
@@ -19,6 +20,7 @@ import {
   SystemMenuApi,
   updateMenu,
 } from '#/api/system/menu';
+import {getSystemStatusOptions, SYSTEM_STATUS} from '#/constants/system';
 import {$t} from '#/locales';
 import {componentKeys} from '#/router/routes';
 
@@ -254,12 +256,9 @@ const schema: VbenFormSchema[] = [
     component: 'RadioGroup',
     componentProps: {
       isButton: true,
-      options: [
-        { label: $t('common.enabled'), value: 1 },
-        { label: $t('common.disabled'), value: 0 },
-      ],
+      options: getSystemStatusOptions(),
     },
-    defaultValue: 1,
+    defaultValue: SYSTEM_STATUS.NORMAL,
     fieldName: 'status',
     label: $t('system.menu.status'),
   },

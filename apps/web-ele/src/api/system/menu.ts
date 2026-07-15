@@ -1,5 +1,7 @@
 import type {Recordable} from '@vben/types';
 
+import type {SystemStatus} from '#/constants/system';
+
 import {requestClient} from '#/api/request';
 
 export namespace SystemMenuApi {
@@ -84,6 +86,8 @@ export namespace SystemMenuApi {
     pid: string;
     /** 重定向 */
     redirect?: string;
+    /** 状态 */
+    status: SystemStatus;
     /** 菜单类型 */
     type: (typeof MenuTypes)[number];
 

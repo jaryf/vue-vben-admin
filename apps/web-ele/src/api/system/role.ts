@@ -1,5 +1,7 @@
 import type { Recordable } from '@vben/types';
 
+import type {SystemStatus} from '#/constants/system';
+
 import { requestClient } from '#/api/request';
 
 export namespace SystemRoleApi {
@@ -8,7 +10,7 @@ export namespace SystemRoleApi {
     menuIds: number[];
     name: string;
     remark?: string;
-    status: 0 | 1;
+    status: SystemStatus;
 
     [key: string]: any;
   }

@@ -1,10 +1,12 @@
 import type {VxeTableGridColumns} from '@vben/plugins/vxe-table';
 
 import type {VbenFormSchema} from '#/adapter/form';
-import {z} from '#/adapter/form';
 import type {OnActionClickFn} from '#/adapter/vxe-table';
 import type {SystemDeptApi} from '#/api/system/dept';
+
+import {z} from '#/adapter/form';
 import {getDeptList} from '#/api/system/dept';
+import {getSystemStatusOptions, SYSTEM_STATUS} from '#/constants/system';
 import {$t} from '#/locales';
 
 /**
@@ -41,12 +43,9 @@ export function useSchema(): VbenFormSchema[] {
       component: 'RadioGroup',
       componentProps: {
         isButton: true,
-        options: [
-          { label: $t('common.enabled'), value: 1 },
-          { label: $t('common.disabled'), value: 0 },
-        ],
+        options: getSystemStatusOptions(),
       },
-      defaultValue: 1,
+      defaultValue: SYSTEM_STATUS.NORMAL,
       fieldName: 'status',
       label: $t('system.dept.status'),
     },

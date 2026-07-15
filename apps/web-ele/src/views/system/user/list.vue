@@ -1,17 +1,23 @@
 <script lang="ts" setup>
-import type {Recordable} from '@vben/types';
-
 import type {VxeTableGridOptions} from '#/adapter/vxe-table';
-import {useVbenVxeGrid, VbenTableAction} from '#/adapter/vxe-table';
 import type {SystemDeptApi, SystemUserApi} from '#/api';
-import {deleteUser, getDeptList, getUserList, updateUser} from '#/api';
 
 import {onMounted, ref, watch} from 'vue';
 
 import {Page, Tree, useVbenDrawer} from '@vben/common-ui';
 import {Plus} from '@vben/icons';
 
-import {ElButton, ElCard, ElInput, ElMessage, ElMessageBox,} from 'element-plus';
+import {
+  ElButton,
+  ElCard,
+  ElInput,
+  ElMessage,
+  ElMessageBox,
+} from 'element-plus';
+
+import {useVbenVxeGrid, VbenTableAction} from '#/adapter/vxe-table';
+import {deleteUser, getDeptList, getUserList, updateUser} from '#/api';
+import {getSystemStatusLabel} from '#/constants/system';
 import {$t} from '#/locales';
 
 import {useColumns, useGridFormSchema} from './data';
@@ -93,13 +99,9 @@ async function onStatusChange(
   newStatus: number,
   row: SystemUserApi.SystemUser,
 ) {
-  const status: Recordable<string> = {
-    0: '禁用',
-    1: '启用',
-  };
   try {
     await confirm(
-      `你要将${row.username}的状态切换为 【${status[newStatus.toString()]}】 吗？`,
+      `你要将${row.username}的状态切换为 【${getSystemStatusLabel(newStatus)}】 吗？`,
       `切换状态`,
     );
     await updateUser(row.id, { status: newStatus });

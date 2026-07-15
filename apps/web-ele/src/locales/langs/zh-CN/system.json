@@ -1,5 +1,7 @@
 {
   "title": "系统管理",
+  "statusNormal": "正常",
+  "statusAbnormal": "异常",
   "user": {
     "title": "用户管理",
     "list": "用户列表",

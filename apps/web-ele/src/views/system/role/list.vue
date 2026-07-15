@@ -1,15 +1,18 @@
 <script lang="ts" setup>
-import type {Recordable} from '@vben/types';
-
-import type {OnActionClickParams, VxeTableGridOptions,} from '#/adapter/vxe-table';
-import {useVbenVxeGrid} from '#/adapter/vxe-table';
+import type {
+  OnActionClickParams,
+  VxeTableGridOptions,
+} from '#/adapter/vxe-table';
 import type {SystemRoleApi} from '#/api';
-import {deleteRole, getRoleList, updateRole} from '#/api';
 
 import {Page, useVbenDrawer} from '@vben/common-ui';
 import {Plus} from '@vben/icons';
 
 import {ElButton, ElMessage, ElMessageBox} from 'element-plus';
+
+import {useVbenVxeGrid} from '#/adapter/vxe-table';
+import {deleteRole, getRoleList, updateRole} from '#/api';
+import {getSystemStatusLabel} from '#/constants/system';
 import {$t} from '#/locales';
 
 import {useColumns, useGridFormSchema} from './data';
@@ -89,13 +92,9 @@ async function onStatusChange(
   newStatus: number,
   row: SystemRoleApi.SystemRole,
 ) {
-  const status: Recordable<string> = {
-    0: '禁用',
-    1: '启用',
-  };
   try {
     await confirm(
-      `你要将${row.name}的状态切换为 【${status[newStatus.toString()]}】 吗？`,
+      `你要将${row.name}的状态切换为 【${getSystemStatusLabel(newStatus)}】 吗？`,
       `切换状态`,
     );
     await updateRole(row.id, { status: newStatus });

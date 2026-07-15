@@ -2,6 +2,7 @@ import type { VbenFormSchema } from '#/adapter/form';
 import type { OnActionClickFn, VxeTableGridColumns } from '#/adapter/vxe-table';
 import type { SystemRoleApi } from '#/api';
 
+import {getSystemStatusOptions, SYSTEM_STATUS} from '#/constants/system';
 import { $t } from '#/locales';
 
 export function useFormSchema(): VbenFormSchema[] {
@@ -16,12 +17,9 @@ export function useFormSchema(): VbenFormSchema[] {
       component: 'RadioGroup',
       componentProps: {
         isButton: true,
-        options: [
-          { label: $t('common.enabled'), value: 1 },
-          { label: $t('common.disabled'), value: 0 },
-        ],
+        options: getSystemStatusOptions(),
       },
-      defaultValue: 1,
+      defaultValue: SYSTEM_STATUS.NORMAL,
       fieldName: 'status',
       label: $t('system.role.status'),
     },
@@ -52,10 +50,7 @@ export function useGridFormSchema(): VbenFormSchema[] {
       component: 'Select',
       componentProps: {
         clearable: true,
-        options: [
-          { label: $t('common.enabled'), value: 1 },
-          { label: $t('common.disabled'), value: 0 },
-        ],
+        options: getSystemStatusOptions(),
       },
       fieldName: 'status',
       label: $t('system.role.status'),

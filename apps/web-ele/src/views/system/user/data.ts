@@ -9,6 +9,7 @@ import { h } from 'vue';
 import { ElTag } from 'element-plus';
 
 import { getDeptList } from '#/api';
+import {getSystemStatusOptions, SYSTEM_STATUS} from '#/constants/system';
 import { $t } from '#/locales';
 
 export function useFormSchema(): VbenFormSchema[] {
@@ -40,12 +41,9 @@ export function useFormSchema(): VbenFormSchema[] {
       component: 'RadioGroup',
       componentProps: {
         isButton: true,
-        options: [
-          { label: $t('common.enabled'), value: 1 },
-          { label: $t('common.disabled'), value: 0 },
-        ],
+        options: getSystemStatusOptions(),
       },
-      defaultValue: 1,
+      defaultValue: SYSTEM_STATUS.NORMAL,
       fieldName: 'status',
       label: $t('system.user.status'),
     },
@@ -71,10 +69,7 @@ export function useGridFormSchema(): VbenFormSchema[] {
       component: 'Select',
       componentProps: {
         clearable: true,
-        options: [
-          { label: $t('common.enabled'), value: 1 },
-          { label: $t('common.disabled'), value: 0 },
-        ],
+        options: getSystemStatusOptions(),
       },
       fieldName: 'status',
       label: $t('system.user.status'),
@@ -89,7 +84,7 @@ export function useGridFormSchema(): VbenFormSchema[] {
 export function useDescriptionItems(
   row?: SystemUserApi.SystemUser,
 ): DescriptionsItemType[] {
-  const enabled = row?.status === 1;
+  const normal = row?.status === SYSTEM_STATUS.NORMAL;
   return [
     { label: $t('system.user.id'), content: row?.id },
     { label: $t('system.user.name'), content: row?.username },
@@ -100,11 +95,11 @@ export function useDescriptionItems(
         h(
           ElTag,
           {
-            type: enabled ? 'success' : 'danger',
+            type: normal ? 'success' : 'danger',
           },
           {
             default: () =>
-              enabled ? $t('common.enabled') : $t('common.disabled'),
+              normal ? $t('system.statusNormal') : $t('system.statusAbnormal'),
           },
         ),
     },
