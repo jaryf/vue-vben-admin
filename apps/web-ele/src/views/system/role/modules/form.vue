@@ -2,7 +2,6 @@
 import type { Recordable } from '@vben/types';
 
 import type { SystemRoleApi } from '#/api/system/role';
-import { createRole, updateRole } from '#/api/system/role';
 
 import { computed, nextTick, ref } from 'vue';
 
@@ -11,6 +10,7 @@ import { IconifyIcon } from '@vben/icons';
 
 import { useVbenForm } from '#/adapter/form';
 import { getMenuList } from '#/api/system/menu';
+import { createRole, updateRole } from '#/api/system/role';
 import { $t } from '#/locales';
 
 import { useFormSchema } from '../data';
@@ -28,7 +28,7 @@ const permissions = ref<Recordable<any>[]>([]);
 const loadingPermissions = ref(false);
 
 const id = ref();
-const [Drawer, drawerApi] = useVbenDrawer({
+const [Drawer, drawerApi] = useVbenDrawer<SystemRoleApi.SystemRole>({
   async onConfirm() {
     const { valid } = await formApi.validate();
     if (!valid) return;
@@ -46,7 +46,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
 
   async onOpenChange(isOpen) {
     if (isOpen) {
-      const data = drawerApi.getData<SystemRoleApi.SystemRole>();
+      const data = drawerApi.getData();
       formApi.resetForm();
 
       if (data) {

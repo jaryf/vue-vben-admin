@@ -19,19 +19,22 @@ import type {
   SwitchProps,
   UploadProps,
 } from 'element-plus';
-import {ElNotification} from 'element-plus';
 
-import type {Component} from 'vue';
-import {defineAsyncComponent, defineComponent, h, ref} from 'vue';
+import type { Component } from 'vue';
 
 import type {
   ApiComponentSharedProps,
   BaseFormComponentType,
   IconPickerProps,
 } from '@vben/common-ui';
-import {ApiComponent, globalShareState, IconPicker} from '@vben/common-ui';
-import type {Recordable} from '@vben/types';
-import {$t} from '@vben/locales';
+import type { Recordable } from '@vben/types';
+
+import { defineAsyncComponent, defineComponent, h, ref } from 'vue';
+
+import { ApiComponent, globalShareState, IconPicker } from '@vben/common-ui';
+import { $t } from '@vben/locales';
+
+import { ElNotification } from 'element-plus';
 
 type ElTreeSelectSchemaProps = InstanceType<typeof ElTreeSelectType>['$props'];
 type ElTimePickerSchemaProps = InstanceType<typeof ElTimePickerType>['$props'];
@@ -295,9 +298,7 @@ async function initComponentAdapter() {
       inputComponent: ElInput,
     }),
     Input: withDefaultPlaceholder(ElInput, 'input'),
-    InputNumber: withDefaultPlaceholder(ElInputNumber, 'input', {
-      style: { width: '100%' },
-    }),
+    InputNumber: withDefaultPlaceholder(ElInputNumber, 'input'),
     RadioGroup: (props, { attrs, slots }) => {
       let defaultSlot;
       if (Reflect.has(slots, 'default')) {

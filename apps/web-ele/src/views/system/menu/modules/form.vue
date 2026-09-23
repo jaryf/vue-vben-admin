@@ -1,17 +1,17 @@
 <script lang="ts" setup>
-import type {Recordable} from '@vben/types';
+import type { Recordable } from '@vben/types';
 
-import type {VbenFormSchema} from '#/adapter/form';
+import type { VbenFormSchema } from '#/adapter/form';
 
-import {computed, h, ref} from 'vue';
+import { computed, h, ref } from 'vue';
 
-import {useVbenDrawer} from '@vben/common-ui';
-import {IconifyIcon} from '@vben/icons';
-import {$te} from '@vben/locales';
+import { useVbenDrawer } from '@vben/common-ui';
+import { IconifyIcon } from '@vben/icons';
+import { $te } from '@vben/locales';
 
-import {breakpointsTailwind, useBreakpoints} from '@vueuse/core';
+import { breakpointsTailwind, useBreakpoints } from '@vueuse/core';
 
-import {useVbenForm, z} from '#/adapter/form';
+import { useVbenForm, z } from '#/adapter/form';
 import {
   createMenu,
   getMenuList,
@@ -20,11 +20,11 @@ import {
   SystemMenuApi,
   updateMenu,
 } from '#/api/system/menu';
-import {getSystemStatusOptions, SYSTEM_STATUS} from '#/constants/system';
-import {$t} from '#/locales';
-import {componentKeys} from '#/router/routes';
+import { getSystemStatusOptions, SYSTEM_STATUS } from '#/constants/system';
+import { $t } from '#/locales';
+import { componentKeys } from '#/router/routes';
 
-import {getMenuTypeOptions} from '../data';
+import { getMenuTypeOptions } from '../data';
 
 const emit = defineEmits<{
   success: [];
@@ -52,17 +52,17 @@ const schema: VbenFormSchema[] = [
       .string()
       .min(2, $t('ui.formRules.minLength', [$t('system.menu.menuName'), 2]))
       .max(30, $t('ui.formRules.maxLength', [$t('system.menu.menuName'), 30]))
-      .refine(
-        async (value: string) => {
-          return !(await isMenuNameExists(value, formData.value?.id));
-        },
-        (value) => ({
-          message: $t('ui.formRules.alreadyExists', [
-            $t('system.menu.menuName'),
-            value,
-          ]),
-        }),
-      ),
+      .superRefine(async (value, ctx) => {
+        if (await isMenuNameExists(value, formData.value?.id)) {
+          ctx.addIssue({
+            code: 'custom',
+            message: $t('ui.formRules.alreadyExists', [
+              $t('system.menu.menuName'),
+              value,
+            ]),
+          });
+        }
+      }),
   },
   {
     component: 'ApiTreeSelect',
@@ -134,17 +134,17 @@ const schema: VbenFormSchema[] = [
         },
         $t('ui.formRules.startWith', [$t('system.menu.path'), '/']),
       )
-      .refine(
-        async (value: string) => {
-          return !(await isMenuPathExists(value, formData.value?.id));
-        },
-        (value) => ({
-          message: $t('ui.formRules.alreadyExists', [
-            $t('system.menu.path'),
-            value,
-          ]),
-        }),
-      ),
+      .superRefine(async (value, ctx) => {
+        if (await isMenuPathExists(value, formData.value?.id)) {
+          ctx.addIssue({
+            code: 'custom',
+            message: $t('ui.formRules.alreadyExists', [
+              $t('system.menu.path'),
+              value,
+            ]),
+          });
+        }
+      }),
   },
   {
     component: 'Input',
@@ -283,11 +283,11 @@ const schema: VbenFormSchema[] = [
   },
   {
     component: 'Input',
-    componentProps: (values) => {
+    componentProps: ({ rootValues }) => {
       return {
         class: 'w-full',
         clearable: true,
-        disabled: values.meta?.badgeType !== 'normal',
+        disabled: rootValues?.meta?.badgeType !== 'normal',
       };
     },
     dependencies: {
@@ -439,11 +439,13 @@ const [Form, formApi] = useVbenForm({
   showDefaultActions: false,
   wrapperClass: 'grid-cols-2 gap-x-4',
 });
-const [Drawer, drawerApi] = useVbenDrawer({
+const [Drawer, drawerApi] = useVbenDrawer<
+  SystemMenuApi.SystemMenu & { linkSrc?: string }
+>({
   onConfirm: onSubmit,
   onOpenChange(isOpen) {
     if (isOpen) {
-      const data = drawerApi.getData<SystemMenuApi.SystemMenu>();
+      const data = drawerApi.getData();
       if (data?.type === 'link') {
         data.linkSrc = data.meta?.link;
       } else if (data?.type === 'embedded') {
@@ -451,10 +453,8 @@ const [Drawer, drawerApi] = useVbenDrawer({
       }
       if (data) {
         formData.value = data;
-        formApi.setValues(formData.value);
-        titleSuffix.value = formData.value.meta?.title
-          ? $t(formData.value.meta.title)
-          : '';
+        formApi.setValues(data);
+        titleSuffix.value = data.meta?.title ? $t(data.meta.title) : '';
       } else {
         formApi.resetForm();
         titleSuffix.value = '';

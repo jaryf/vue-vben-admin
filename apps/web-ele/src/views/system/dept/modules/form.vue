@@ -1,17 +1,17 @@
 <script lang="ts" setup>
-import type {SystemDeptApi} from '#/api/system/dept';
-import {createDept, updateDept} from '#/api/system/dept';
+import type { SystemDeptApi } from '#/api/system/dept';
 
-import {computed, ref} from 'vue';
+import { computed, ref } from 'vue';
 
-import {useVbenModal} from '@vben/common-ui';
+import { useVbenModal } from '@vben/common-ui';
 
-import {ElButton} from 'element-plus';
+import { ElButton } from 'element-plus';
 
-import {useVbenForm} from '#/adapter/form';
-import {$t} from '#/locales';
+import { useVbenForm } from '#/adapter/form';
+import { createDept, updateDept } from '#/api/system/dept';
+import { $t } from '#/locales';
 
-import {useSchema} from '../data';
+import { useSchema } from '../data';
 
 const emit = defineEmits(['success']);
 const formData = ref<SystemDeptApi.SystemDept>();
@@ -32,7 +32,7 @@ function resetForm() {
   formApi.setValues(formData.value || {});
 }
 
-const [Modal, modalApi] = useVbenModal({
+const [Modal, modalApi] = useVbenModal<SystemDeptApi.SystemDept>({
   async onConfirm() {
     const { valid } = await formApi.validate();
     if (valid) {
@@ -51,13 +51,13 @@ const [Modal, modalApi] = useVbenModal({
   },
   onOpenChange(isOpen) {
     if (isOpen) {
-      const data = modalApi.getData<SystemDeptApi.SystemDept>();
+      const data = modalApi.getData();
       if (data) {
         if (data.pid === 0) {
           data.pid = undefined;
         }
         formData.value = data;
-        formApi.setValues(formData.value);
+        formApi.setValues(data);
       }
     }
   },

@@ -64,15 +64,31 @@ const emit = defineEmits<{ clearPreferencesAndLogout: [] }>();
 
 const message = globalShareState.getMessage();
 
-const appLocale = defineModel<SupportedLanguagesType>('appLocale');
-const appTimezone = defineModel<string>('appTimezone');
+const appLocale = defineModel<SupportedLanguagesType | undefined>('appLocale', {
+  default: undefined,
+});
+const appTimezone = defineModel<string | undefined>('appTimezone', {
+  default: undefined,
+});
 const appDynamicTitle = defineModel<boolean>('appDynamicTitle');
-const appLayout = defineModel<LayoutType>('appLayout');
+const appLayout = defineModel<LayoutType | undefined>('appLayout', {
+  default: undefined,
+});
 const appColorGrayMode = defineModel<boolean>('appColorGrayMode');
 const appColorWeakMode = defineModel<boolean>('appColorWeakMode');
-const appContentCompact = defineModel<ContentCompactType>('appContentCompact');
+const appContentCompact = defineModel<ContentCompactType | undefined>(
+  'appContentCompact',
+  {
+    default: undefined,
+  },
+);
 const appWatermark = defineModel<boolean>('appWatermark');
-const appWatermarkContent = defineModel<string>('appWatermarkContent');
+const appWatermarkContent = defineModel<string | undefined>(
+  'appWatermarkContent',
+  {
+    default: undefined,
+  },
+);
 const appEnableCheckUpdates = defineModel<boolean>('appEnableCheckUpdates');
 const appEnableCopyPreferences = defineModel<boolean>(
   'appEnableCopyPreferences',
@@ -80,26 +96,43 @@ const appEnableCopyPreferences = defineModel<boolean>(
 const appEnableStickyPreferencesNavigationBar = defineModel<boolean>(
   'appEnableStickyPreferencesNavigationBar',
 );
-const appPreferencesButtonPosition = defineModel<PreferencesButtonPositionType>(
-  'appPreferencesButtonPosition',
-);
+const appPreferencesButtonPosition = defineModel<
+  PreferencesButtonPositionType | undefined
+>('appPreferencesButtonPosition', { default: undefined });
 
 const transitionProgress = defineModel<boolean>('transitionProgress');
-const transitionName = defineModel<string>('transitionName');
+const transitionName = defineModel<string | undefined>('transitionName', {
+  default: undefined,
+});
 const transitionLoading = defineModel<boolean>('transitionLoading');
 const transitionEnable = defineModel<boolean>('transitionEnable');
 
-const themeColorPrimary = defineModel<string>('themeColorPrimary');
-const themeBuiltinType = defineModel<BuiltinThemeType>('themeBuiltinType');
-const themeMode = defineModel<ThemeModeType>('themeMode');
-const themeRadius = defineModel<string>('themeRadius');
-const themeFontSize = defineModel<number>('themeFontSize');
+const themeColorPrimary = defineModel<string | undefined>('themeColorPrimary', {
+  default: undefined,
+});
+const themeBuiltinType = defineModel<BuiltinThemeType | undefined>(
+  'themeBuiltinType',
+  {
+    default: undefined,
+  },
+);
+const themeMode = defineModel<ThemeModeType | undefined>('themeMode', {
+  default: undefined,
+});
+const themeRadius = defineModel<string | undefined>('themeRadius', {
+  default: undefined,
+});
+const themeFontSize = defineModel<number | undefined>('themeFontSize', {
+  default: undefined,
+});
 const themeSemiDarkSidebar = defineModel<boolean>('themeSemiDarkSidebar');
 const themeSemiDarkSidebarSub = defineModel<boolean>('themeSemiDarkSidebarSub');
 const themeSemiDarkHeader = defineModel<boolean>('themeSemiDarkHeader');
 
 const sidebarEnable = defineModel<boolean>('sidebarEnable');
-const sidebarWidth = defineModel<number>('sidebarWidth');
+const sidebarWidth = defineModel<number | undefined>('sidebarWidth', {
+  default: undefined,
+});
 const sidebarDraggable = defineModel<boolean>('sidebarDraggable');
 const sidebarCollapsed = defineModel<boolean>('sidebarCollapsed');
 const sidebarCollapsedShowTitle = defineModel<boolean>(
@@ -112,15 +145,20 @@ const sidebarExpandOnHover = defineModel<boolean>('sidebarExpandOnHover');
 const sidebarCollapsedButton = defineModel<boolean>('sidebarCollapsedButton');
 const sidebarFixedButton = defineModel<boolean>('sidebarFixedButton');
 const headerEnable = defineModel<boolean>('headerEnable');
-const headerMode = defineModel<LayoutHeaderModeType>('headerMode');
-const headerMenuAlign =
-  defineModel<LayoutHeaderMenuAlignType>('headerMenuAlign');
+const headerMode = defineModel<LayoutHeaderModeType | undefined>('headerMode', {
+  default: undefined,
+});
+const headerMenuAlign = defineModel<LayoutHeaderMenuAlignType | undefined>(
+  'headerMenuAlign',
+  { default: undefined },
+);
 
 const breadcrumbEnable = defineModel<boolean>('breadcrumbEnable');
 const breadcrumbShowIcon = defineModel<boolean>('breadcrumbShowIcon');
 const breadcrumbShowHome = defineModel<boolean>('breadcrumbShowHome');
-const breadcrumbStyleType = defineModel<BreadcrumbStyleType>(
+const breadcrumbStyleType = defineModel<BreadcrumbStyleType | undefined>(
   'breadcrumbStyleType',
+  { default: undefined },
 );
 const breadcrumbHideOnlyOne = defineModel<boolean>('breadcrumbHideOnlyOne');
 
@@ -132,14 +170,19 @@ const tabbarPersist = defineModel<boolean>('tabbarPersist');
 const tabbarVisitHistory = defineModel<boolean>('tabbarVisitHistory');
 const tabbarDraggable = defineModel<boolean>('tabbarDraggable');
 const tabbarWheelable = defineModel<boolean>('tabbarWheelable');
-const tabbarStyleType = defineModel<string>('tabbarStyleType');
-const tabbarMaxCount = defineModel<number>('tabbarMaxCount');
+const tabbarStyleType = defineModel<string | undefined>('tabbarStyleType', {
+  default: undefined,
+});
+const tabbarMaxCount = defineModel<number | undefined>('tabbarMaxCount', {
+  default: undefined,
+});
 const tabbarMiddleClickToClose = defineModel<boolean>(
   'tabbarMiddleClickToClose',
 );
 
-const navigationStyleType = defineModel<NavigationStyleType>(
+const navigationStyleType = defineModel<NavigationStyleType | undefined>(
   'navigationStyleType',
+  { default: undefined },
 );
 const navigationSplit = defineModel<boolean>('navigationSplit');
 const navigationAccordion = defineModel<boolean>('navigationAccordion');
@@ -151,13 +194,25 @@ const footerFixed = defineModel<boolean>('footerFixed');
 
 const copyrightSettingShow = defineModel<boolean>('copyrightSettingShow');
 const copyrightEnable = defineModel<boolean>('copyrightEnable');
-const copyrightCompanyName = defineModel<string>('copyrightCompanyName');
-const copyrightCompanySiteLink = defineModel<string>(
-  'copyrightCompanySiteLink',
+const copyrightCompanyName = defineModel<string | undefined>(
+  'copyrightCompanyName',
+  {
+    default: undefined,
+  },
 );
-const copyrightDate = defineModel<string>('copyrightDate');
-const copyrightIcp = defineModel<string>('copyrightIcp');
-const copyrightIcpLink = defineModel<string>('copyrightIcpLink');
+const copyrightCompanySiteLink = defineModel<string | undefined>(
+  'copyrightCompanySiteLink',
+  { default: undefined },
+);
+const copyrightDate = defineModel<string | undefined>('copyrightDate', {
+  default: undefined,
+});
+const copyrightIcp = defineModel<string | undefined>('copyrightIcp', {
+  default: undefined,
+});
+const copyrightIcpLink = defineModel<string | undefined>('copyrightIcpLink', {
+  default: undefined,
+});
 
 const shortcutKeysEnable = defineModel<boolean>('shortcutKeysEnable');
 const shortcutKeysGlobalSearch = defineModel<boolean>(
@@ -174,15 +229,43 @@ const shortcutKeysGlobalLockScreen = defineModel<boolean>(
   'shortcutKeysGlobalLockScreen',
 );
 
-const widgetGlobalSearch = defineModel<boolean>('widgetGlobalSearch');
-const widgetFullscreen = defineModel<boolean>('widgetFullscreen');
-const widgetLanguageToggle = defineModel<boolean>('widgetLanguageToggle');
-const widgetNotification = defineModel<boolean>('widgetNotification');
-const widgetThemeToggle = defineModel<boolean>('widgetThemeToggle');
-const widgetSidebarToggle = defineModel<boolean>('widgetSidebarToggle');
-const widgetLockScreen = defineModel<boolean>('widgetLockScreen');
-const widgetRefresh = defineModel<boolean>('widgetRefresh');
-const widgetTimezone = defineModel<boolean>('widgetTimezone');
+const widgetGlobalSearchButtonPosition = defineModel<string | undefined>(
+  'widgetGlobalSearchButtonPosition',
+  { default: undefined },
+);
+const widgetFullscreenButtonPosition = defineModel<string | undefined>(
+  'widgetFullscreenButtonPosition',
+  { default: undefined },
+);
+const widgetLanguageToggleButtonPosition = defineModel<string | undefined>(
+  'widgetLanguageToggleButtonPosition',
+  { default: undefined },
+);
+const widgetNotificationButtonPosition = defineModel<string | undefined>(
+  'widgetNotificationButtonPosition',
+  { default: undefined },
+);
+const widgetThemeToggleButtonPosition = defineModel<string | undefined>(
+  'widgetThemeToggleButtonPosition',
+  { default: undefined },
+);
+const widgetLockScreenButtonPosition = defineModel<string | undefined>(
+  'widgetLockScreenButtonPosition',
+  { default: undefined },
+);
+const widgetLogoutButtonPosition = defineModel<string | undefined>(
+  'widgetLogoutButtonPosition',
+  { default: undefined },
+);
+const widgetOrder = defineModel<string[]>('widgetOrder', { required: true });
+const widgetRefreshButtonPosition = defineModel<string | undefined>(
+  'widgetRefreshButtonPosition',
+  { default: undefined },
+);
+const widgetTimezoneButtonPosition = defineModel<string | undefined>(
+  'widgetTimezoneButtonPosition',
+  { default: undefined },
+);
 
 const {
   customPreferences,
@@ -483,15 +566,34 @@ function handleCustomPreferencesUpdate(updates: CustomPreferencesRecord) {
                 v-model:app-preferences-button-position="
                   appPreferencesButtonPosition
                 "
-                v-model:widget-fullscreen="widgetFullscreen"
-                v-model:widget-global-search="widgetGlobalSearch"
-                v-model:widget-language-toggle="widgetLanguageToggle"
-                v-model:widget-lock-screen="widgetLockScreen"
-                v-model:widget-notification="widgetNotification"
-                v-model:widget-refresh="widgetRefresh"
-                v-model:widget-sidebar-toggle="widgetSidebarToggle"
-                v-model:widget-theme-toggle="widgetThemeToggle"
-                v-model:widget-timezone="widgetTimezone"
+                v-model:widget-fullscreen-button-position="
+                  widgetFullscreenButtonPosition
+                "
+                v-model:widget-global-search-button-position="
+                  widgetGlobalSearchButtonPosition
+                "
+                v-model:widget-language-toggle-button-position="
+                  widgetLanguageToggleButtonPosition
+                "
+                v-model:widget-lock-screen-button-position="
+                  widgetLockScreenButtonPosition
+                "
+                v-model:widget-logout-button-position="
+                  widgetLogoutButtonPosition
+                "
+                v-model:widget-order="widgetOrder"
+                v-model:widget-notification-button-position="
+                  widgetNotificationButtonPosition
+                "
+                v-model:widget-refresh-button-position="
+                  widgetRefreshButtonPosition
+                "
+                v-model:widget-theme-toggle-button-position="
+                  widgetThemeToggleButtonPosition
+                "
+                v-model:widget-timezone-button-position="
+                  widgetTimezoneButtonPosition
+                "
               />
             </Block>
             <Block :title="$t('preferences.footer.title')">

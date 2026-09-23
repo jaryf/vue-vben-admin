@@ -1,22 +1,22 @@
-import type {TableActionProps} from '@vben/common-ui';
-import type {VxeTableGridOptions} from '@vben/plugins/vxe-table';
-import type {Recordable} from '@vben/types';
+import type { FormValues, TableActionProps } from '@vben/common-ui';
+import type { VxeTableGridOptions } from '@vben/plugins/vxe-table';
+import type { Recordable } from '@vben/types';
 
-import type {ComponentPropsMap, ComponentType} from './component';
+import type { ComponentPropsMap, ComponentType } from './component';
 
-import {defineComponent, h, ref} from 'vue';
+import { defineComponent, h, ref } from 'vue';
 
-import {useAccess} from '@vben/access';
-import {VbenTableAction as VbenTableActionCore} from '@vben/common-ui';
-import {IconifyIcon} from '@vben/icons';
-import {$te} from '@vben/locales';
+import { useAccess } from '@vben/access';
+import { VbenTableAction as VbenTableActionCore } from '@vben/common-ui';
+import { IconifyIcon } from '@vben/icons';
+import { $te } from '@vben/locales';
 import {
   setupVbenVxeTable,
   useVbenVxeGrid as useGrid,
 } from '@vben/plugins/vxe-table';
-import {get, isFunction, isString} from '@vben/utils';
+import { get, isFunction, isString } from '@vben/utils';
 
-import {objectOmit} from '@vueuse/core';
+import { objectOmit } from '@vueuse/core';
 import {
   ElButton,
   ElImage,
@@ -27,10 +27,10 @@ import {
   ElTooltip,
 } from 'element-plus';
 
-import {getSystemStatusOptions, SYSTEM_STATUS} from '#/constants/system';
-import {$t} from '#/locales';
+import { getSystemStatusOptions, SYSTEM_STATUS } from '#/constants/system';
+import { $t } from '#/locales';
 
-import {useVbenForm} from './form';
+import { useVbenForm } from './form';
 
 /**
  * 将业务侧或旧适配层传入的标签类型统一映射到 Element Plus 支持的类型。
@@ -485,9 +485,24 @@ setupVbenVxeTable({
   useVbenForm,
 });
 
-export const useVbenVxeGrid = <T extends Record<string, any>>(
-  ...rest: Parameters<typeof useGrid<T, ComponentType, ComponentPropsMap>>
-) => useGrid<T, ComponentType, ComponentPropsMap>(...rest);
+export const useVbenVxeGrid = <
+  T extends Record<string, any>,
+  TFormValues extends FormValues = FormValues,
+  TSubmitValues extends FormValues = TFormValues,
+>(
+  ...rest: Parameters<
+    typeof useGrid<
+      T,
+      ComponentType,
+      ComponentPropsMap,
+      TFormValues,
+      TSubmitValues
+    >
+  >
+) =>
+  useGrid<T, ComponentType, ComponentPropsMap, TFormValues, TSubmitValues>(
+    ...rest,
+  );
 
 /**
  * 表格操作按钮组件

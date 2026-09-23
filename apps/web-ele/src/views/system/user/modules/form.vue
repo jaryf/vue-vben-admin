@@ -1,18 +1,18 @@
 <script lang="ts" setup>
-import type {Recordable} from '@vben/types';
+import type { Recordable } from '@vben/types';
 
-import type {SystemUserApi} from '#/api/system/user';
-import {createUser, updateUser} from '#/api/system/user';
+import type { SystemUserApi } from '#/api/system/user';
 
-import {computed, nextTick, ref} from 'vue';
+import { computed, nextTick, ref } from 'vue';
 
-import {Tree, useVbenDrawer} from '@vben/common-ui';
+import { Tree, useVbenDrawer } from '@vben/common-ui';
 
-import {useVbenForm} from '#/adapter/form';
-import {getMenuList} from '#/api/system/menu';
-import {$t} from '#/locales';
+import { useVbenForm } from '#/adapter/form';
+import { getMenuList } from '#/api/system/menu';
+import { createUser, updateUser } from '#/api/system/user';
+import { $t } from '#/locales';
 
-import {useFormSchema} from '../data';
+import { useFormSchema } from '../data';
 
 const emits = defineEmits(['success']);
 
@@ -27,7 +27,7 @@ const permissions = ref<Recordable<any>[]>([]);
 const loadingPermissions = ref(false);
 
 const id = ref();
-const [Drawer, drawerApi] = useVbenDrawer({
+const [Drawer, drawerApi] = useVbenDrawer<SystemUserApi.SystemUser>({
   async onConfirm() {
     const { valid } = await formApi.validate();
     if (!valid) return;
@@ -45,7 +45,7 @@ const [Drawer, drawerApi] = useVbenDrawer({
 
   async onOpenChange(isOpen) {
     if (isOpen) {
-      const data = drawerApi.getData<SystemUserApi.SystemUser>();
+      const data = drawerApi.getData();
       formApi.resetForm();
 
       if (data) {

@@ -110,6 +110,23 @@ const routes: RouteRecordRaw[] = [
               title: $t('examples.form.collapsible'),
             },
           },
+          {
+            name: 'FormLabelWidthExample',
+            path: 'label-width',
+            component: () => import('#/views/examples/form/label-width.vue'),
+            meta: {
+              title: $t('examples.form.labelWidth'),
+            },
+          },
+          {
+            name: 'FormArrayDemo',
+            path: '/form-array-demo',
+            component: () => import('#/views/demos/form-array/index.vue'),
+            meta: {
+              icon: 'lucide:list-plus',
+              title: '表单数组 Demo',
+            },
+          },
         ],
       },
       {
