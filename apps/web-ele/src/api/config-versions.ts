@@ -7,7 +7,7 @@ export interface ConfigVersion {
   scope: 'ai_distribution' | 'feature_flags' | 'moderation_rules';
   version: string;
   schemaVersion: number;
-  payload: { flags: Record<string, boolean> } | { blockedTerms?: string[]; regexRules?: string[]; riskThresholds?: { medium: number; high: number; critical: number; manualReviewBelow: number } } |
+  payload: { flags: Record<string, boolean> } | { blockedTerms?: string[]; regexRules?: string[]; blockedDomains?: string[]; shortlinkDomains?: string[]; riskThresholds?: { medium: number; high: number; critical: number; manualReviewBelow: number } } |
     { maxPercent: number; rolloutPercent: number; languageOverrides?: Record<string, number> };
   status: 'draft' | 'reviewing' | 'approved' | 'published' | 'retired';
   requestedBy: number;
