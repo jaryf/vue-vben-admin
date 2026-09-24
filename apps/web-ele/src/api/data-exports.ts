@@ -29,5 +29,9 @@ export const createDataExport = (data: { dataset: string; fromAt: string; toAt: 
   requestClient.post<DataExportTask>('/data-exports', data, { headers: { 'Idempotency-Key': key } });
 export const approveDataExport = (id: number, note: string) => requestClient.post<DataExportTask>(`/data-exports/${id}/approve`, { note });
 export const rejectDataExport = (id: number, note: string) => requestClient.post<DataExportTask>(`/data-exports/${id}/reject`, { note });
-export const downloadDataExport = (id: number, reasonCode: string) =>
-  requestClient.download<Blob>(`/data-exports/${id}/download`, { params: { reasonCode } });
+export async function downloadDataExport(id: number, reasonCode: string) {
+  const ticket = await requestClient.post<{ downloadUrl: string; expiresAt: string }>(
+    `/data-exports/${id}/download-ticket`, undefined, { params: { reasonCode } },
+  );
+  return requestClient.download<Blob>(ticket.downloadUrl);
+}
