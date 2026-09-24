@@ -8,7 +8,8 @@ import type { ReviewDetail, ReviewRow } from '#/api/moderation';
 
 const filter = reactive({
   reviewId: '', targetType: '', targetEntityId: '', targetMessageId: '',
-  scene: '', status: 'manual_review', finalDecision: '', riskLevel: '', category: '',
+  scene: '', languageCode: '', modelName: '', waitingMinutes: '',
+  status: 'manual_review', finalDecision: '', riskLevel: '', category: '',
 });
 const requestedRange = ref<Date[] | null>(null);
 const rows = ref<ReviewRow[]>([]);
@@ -46,6 +47,9 @@ async function load(cursor = '') {
       targetEntityId: filter.targetEntityId.trim() || undefined,
       targetMessageId: filter.targetMessageId.trim() || undefined,
       scene: filter.scene.trim() || undefined,
+      languageCode: filter.targetType === 'bottle' ? filter.languageCode.trim() || undefined : undefined,
+      modelName: filter.modelName.trim() || undefined,
+      waitingMinutes: filter.status === 'manual_review' || !filter.status ? filter.waitingMinutes || undefined : undefined,
       status: filter.status || undefined,
       finalDecision: filter.finalDecision || undefined,
       riskLevel: filter.riskLevel.trim() || undefined,
@@ -59,7 +63,8 @@ async function load(cursor = '') {
 }
 
 function search() { cursorStack.value = []; void load(); }
-function targetTypeChanged() { filter.targetEntityId = ''; filter.targetMessageId = ''; }
+function targetTypeChanged() { filter.targetEntityId = ''; filter.targetMessageId = ''; filter.languageCode = ''; }
+function statusChanged() { if (filter.status && filter.status !== 'manual_review') filter.waitingMinutes = ''; }
 function next() { if (!nextCursor.value) return; cursorStack.value.push(nextCursor.value); void load(nextCursor.value); }
 function previous() { cursorStack.value.pop(); void load(cursorStack.value.at(-1) || ''); }
 
@@ -106,7 +111,10 @@ onMounted(() => { void load(); });
         <ElInput v-if="filter.targetType !== 'message'" v-model="filter.targetEntityId" placeholder="对象 ID" clearable class="!w-32" />
         <ElInput v-else v-model="filter.targetMessageId" placeholder="消息 UUID" clearable class="!w-64" />
         <ElInput v-model="filter.scene" placeholder="审核场景" clearable maxlength="64" class="!w-36" />
-        <ElSelect v-model="filter.status" clearable placeholder="全部状态" class="!w-40"><ElOption label="人工复核" value="manual_review" /><ElOption label="已通过" value="approved" /><ElOption label="已拒绝" value="rejected" /></ElSelect>
+        <ElInput v-if="filter.targetType === 'bottle'" v-model="filter.languageCode" placeholder="瓶语言代码" clearable maxlength="16" class="!w-32" />
+        <ElInput v-model="filter.modelName" placeholder="模型名称" clearable maxlength="128" class="!w-40" />
+        <ElSelect v-model="filter.status" clearable placeholder="全部状态" class="!w-40" @change="statusChanged"><ElOption label="人工复核" value="manual_review" /><ElOption label="已通过" value="approved" /><ElOption label="已拒绝" value="rejected" /></ElSelect>
+        <ElSelect v-if="!filter.status || filter.status === 'manual_review'" v-model="filter.waitingMinutes" clearable placeholder="最少等待" class="!w-36"><ElOption label="15 分钟" value="15" /><ElOption label="1 小时" value="60" /><ElOption label="4 小时" value="240" /><ElOption label="1 天" value="1440" /></ElSelect>
         <ElSelect v-model="filter.finalDecision" clearable placeholder="全部决策" class="!w-36"><ElOption label="通过" value="approve" /><ElOption label="拒绝" value="reject" /><ElOption label="继续人工复核" value="manual_review" /></ElSelect>
         <ElInput v-model="filter.riskLevel" placeholder="风险等级" clearable class="!w-36" />
         <ElInput v-model="filter.category" placeholder="风险分类" clearable class="!w-36" />
@@ -119,6 +127,7 @@ onMounted(() => { void load(); });
         <ElTableColumn label="对象 ID" min-width="150"><template #default="{ row }">{{ row.targetEntityId || row.targetMessageId || '—' }}</template></ElTableColumn>
         <ElTableColumn prop="scene" label="场景" min-width="120" />
         <ElTableColumn prop="riskLevel" label="风险等级" width="110" />
+        <ElTableColumn prop="modelName" label="模型" min-width="135" />
         <ElTableColumn label="状态" width="125"><template #default="{ row }">{{ statusLabels[row.status] || row.status }}</template></ElTableColumn>
         <ElTableColumn label="最终决策" width="105"><template #default="{ row }">{{ decisionText(row.finalDecision) }}</template></ElTableColumn>
         <ElTableColumn prop="evidenceCount" label="证据数" width="90" />
