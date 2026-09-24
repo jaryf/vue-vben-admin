@@ -7,6 +7,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 
 import {
   adjustAppUserEntitlement, adjustAppUserQuota, getAppUser,
+  getDeletionRequest, listDeletionRequests, reviewDeletionRequest,
   listAppUserBindings, listAppUserDevices, listAppUserIdentityConflicts,
   listAppUserSessions, listAppUsers, revokeAppUserSession,
   revokeAppUserSessions, updateAppUserStatus,
@@ -18,6 +19,7 @@ const canRevoke = computed(() => hasAccessByCodes(['account_user.session.revoke'
 const canStatus = computed(() => hasAccessByCodes(['account_user.status.update']));
 const canQuota = computed(() => hasAccessByCodes(['quota.adjust']));
 const canEntitlement = computed(() => hasAccessByCodes(['entitlement.adjust']));
+const canReviewDeletion = computed(() => hasAccessByCodes(['account_user.deletion.review']));
 const filters = reactive({ userId: '', nickname: '', status: '', countryCode: '' });
 const rows = ref<AppUserRow[]>([]);
 const nextCursor = ref<string | null>(null);
@@ -36,6 +38,14 @@ const action = ref<'entitlement' | 'quota' | 'status'>('status');
 const saving = ref(false);
 const actionKey = ref('');
 const actionForm = reactive({ status: 'active', quotaType: 'bottle_send', amount: 1, entitlementType: '', reasonCode: '', note: '' });
+const deletionOpen = ref(false);
+const deletionRows = ref<Record<string, any>[]>([]);
+const deletionCursor = ref<string | null>(null);
+const deletionStack = ref<string[]>([]);
+const deletionFilter = reactive({ userId: '', status: 'pending' });
+const reviewOpen = ref(false);
+const reviewTarget = ref<Record<string, any> | null>(null);
+const reviewForm = reactive({ decision: 'approve', reasonCode: '', note: '' });
 
 const statusLabels: Record<string, string> = {
   pending_profile: '待完善资料', active: '正常', restricted: '受限',
@@ -143,13 +153,62 @@ async function submitAction() {
   } finally { saving.value = false; }
 }
 
+async function loadDeletions(cursor = '') {
+  const result = await listDeletionRequests({
+    cursor: cursor || undefined, limit: 20,
+    userId: deletionFilter.userId.trim() || undefined,
+    status: deletionFilter.status || undefined,
+  });
+  deletionRows.value = result.items || [];
+  deletionCursor.value = result.nextCursor;
+}
+
+function openDeletions() {
+  deletionOpen.value = true;
+  deletionStack.value = [];
+  void loadDeletions();
+}
+
+function searchDeletions() { deletionStack.value = []; void loadDeletions(); }
+function nextDeletion() {
+  if (!deletionCursor.value) return;
+  deletionStack.value.push(deletionCursor.value);
+  void loadDeletions(deletionCursor.value);
+}
+function previousDeletion() {
+  deletionStack.value.pop();
+  void loadDeletions(deletionStack.value.at(-1) || '');
+}
+
+async function openReview(id: number) {
+  reviewTarget.value = await getDeletionRequest(id);
+  Object.assign(reviewForm, { decision: 'approve', reasonCode: '', note: '' });
+  reviewOpen.value = true;
+}
+
+async function submitReview() {
+  if (!reviewTarget.value || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(reviewForm.reasonCode)) {
+    ElMessage.error('请输入有效的复核原因代码'); return;
+  }
+  saving.value = true;
+  try {
+    await reviewDeletionRequest(reviewTarget.value.requestId, {
+      decision: reviewForm.decision, reasonCode: reviewForm.reasonCode,
+      note: reviewForm.note.trim() || null,
+    });
+    reviewOpen.value = false;
+    ElMessage.success('注销复核已记录');
+    await loadDeletions(deletionStack.value.at(-1) || '');
+  } finally { saving.value = false; }
+}
+
 onMounted(() => { void load(); });
 </script>
 
 <template>
   <div class="p-5">
     <ElCard shadow="never">
-      <template #header>App 用户</template>
+      <template #header><div class="flex items-center justify-between"><span>App 用户</span><ElButton v-if="canReviewDeletion" @click="openDeletions">注销申请复核</ElButton></div></template>
       <div class="mb-4 flex flex-wrap gap-3">
         <ElInput v-model="filters.userId" placeholder="用户 ID" clearable class="!w-36" @keyup.enter="search" />
         <ElInput v-model="filters.nickname" placeholder="昵称" clearable class="!w-44" @keyup.enter="search" />
@@ -226,6 +285,37 @@ onMounted(() => { void load(); });
         <ElFormItem v-if="action !== 'status'" label="备注"><ElInput v-model="actionForm.note" type="textarea" /></ElFormItem>
       </ElForm>
       <template #footer><ElButton @click="actionOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="submitAction">确认</ElButton></template>
+    </ElDialog>
+
+    <ElDialog v-model="deletionOpen" title="注销申请复核" width="85%" destroy-on-close>
+      <div class="mb-4 flex gap-3">
+        <ElInput v-model="deletionFilter.userId" placeholder="用户 ID" clearable class="!w-40" />
+        <ElSelect v-model="deletionFilter.status" class="!w-40" clearable placeholder="全部状态"><ElOption label="冷静期中" value="pending" /><ElOption label="已取消" value="cancelled" /><ElOption label="已完成" value="completed" /></ElSelect>
+        <ElButton @click="searchDeletions">查询</ElButton>
+      </div>
+      <ElTable :data="deletionRows" row-key="requestId">
+        <ElTableColumn prop="requestId" label="申请 ID" width="100" />
+        <ElTableColumn prop="userId" label="用户 ID" width="100" />
+        <ElTableColumn prop="nickname" label="昵称" min-width="120" />
+        <ElTableColumn prop="reasonCode" label="原因" min-width="140" />
+        <ElTableColumn prop="status" label="状态" width="110" />
+        <ElTableColumn prop="requestedAt" label="申请时间" min-width="175" />
+        <ElTableColumn prop="scheduledFor" label="计划注销时间" min-width="175" />
+        <ElTableColumn prop="reviewDecision" label="复核结论" min-width="110" />
+        <ElTableColumn label="操作" width="95"><template #default="{ row }"><ElButton v-if="row.status === 'pending' && !row.reviewDecision" link type="primary" @click="openReview(row.requestId)">复核</ElButton></template></ElTableColumn>
+      </ElTable>
+      <div class="mt-4 flex justify-end gap-2"><ElButton :disabled="deletionStack.length === 0" @click="previousDeletion">上一页</ElButton><ElButton :disabled="!deletionCursor" @click="nextDeletion">下一页</ElButton></div>
+    </ElDialog>
+
+    <ElDialog v-model="reviewOpen" :title="`复核注销申请 #${reviewTarget?.requestId || ''}`" width="560px" destroy-on-close>
+      <ElAlert title="复核不会跳过既有注销冷静期；正式注销由服务端流程执行。" type="info" show-icon :closable="false" class="mb-4" />
+      <ElDescriptions v-if="reviewTarget" :column="1" border class="mb-4"><ElDescriptionsItem label="用户 ID">{{ reviewTarget.userId }}</ElDescriptionsItem><ElDescriptionsItem label="申请原因">{{ reviewTarget.reasonCode }}</ElDescriptionsItem><ElDescriptionsItem label="原因补充">{{ reviewTarget.reasonText || '—' }}</ElDescriptionsItem><ElDescriptionsItem label="计划注销">{{ reviewTarget.scheduledFor }}</ElDescriptionsItem></ElDescriptions>
+      <ElForm label-position="top" @submit.prevent="submitReview">
+        <ElFormItem label="复核结论"><ElRadioGroup v-model="reviewForm.decision"><ElRadio value="approve">通过</ElRadio><ElRadio value="reject">驳回</ElRadio></ElRadioGroup></ElFormItem>
+        <ElFormItem label="原因代码"><ElInput v-model="reviewForm.reasonCode" placeholder="例如 support_verified" /></ElFormItem>
+        <ElFormItem label="备注"><ElInput v-model="reviewForm.note" type="textarea" maxlength="1000" show-word-limit /></ElFormItem>
+      </ElForm>
+      <template #footer><ElButton @click="reviewOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="submitReview">提交复核</ElButton></template>
     </ElDialog>
   </div>
 </template>
