@@ -4,10 +4,10 @@ import type { CursorPage } from './app-users';
 
 export interface ConfigVersion {
   versionId: number;
-  scope: 'feature_flags';
+  scope: 'feature_flags' | 'moderation_rules';
   version: string;
   schemaVersion: number;
-  payload: { flags: Record<string, boolean> };
+  payload: { flags: Record<string, boolean> } | { blockedTerms: string[] };
   status: 'draft' | 'reviewing' | 'approved' | 'published' | 'retired';
   requestedBy: number;
   reviewedBy: null | number;
@@ -22,9 +22,9 @@ export interface ConfigVersion {
 export const listConfigVersions = (params: Record<string, unknown>) =>
   requestClient.get<CursorPage<ConfigVersion>>('/config-versions', { params });
 export const getConfigVersion = (id: number) => requestClient.get<ConfigVersion>(`/config-versions/${id}`);
-export const createConfigVersion = (data: { version: string; payload: ConfigVersion['payload'] }, key: string) =>
+export const createConfigVersion = (data: { scope: ConfigVersion['scope']; version: string; payload: ConfigVersion['payload'] }, key: string) =>
   requestClient.post<ConfigVersion>('/config-versions', data, { headers: { 'Idempotency-Key': key } });
-export const editConfigVersion = (id: number, data: { version: string; payload: ConfigVersion['payload'] }) =>
+export const editConfigVersion = (id: number, data: { scope: ConfigVersion['scope']; version: string; payload: ConfigVersion['payload'] }) =>
   requestClient.request<ConfigVersion>(`/config-versions/${id}`, { method: 'PATCH', data });
 export const submitConfigVersion = (id: number) => requestClient.post<ConfigVersion>(`/config-versions/${id}/submit`);
 export const approveConfigVersion = (id: number, note: string) => requestClient.post<ConfigVersion>(`/config-versions/${id}/approve`, { note });
