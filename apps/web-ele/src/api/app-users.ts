@@ -29,6 +29,8 @@ export const revokeAppUserSession = (id: number, sessionId: number, reasonCode: 
   requestClient.post(`/users/${id}/sessions/revoke/${sessionId}`, { reasonCode });
 export const updateAppUserStatus = (id: number, status: string, reasonCode: string) =>
   requestClient.put(`/users/${id}/status`, { status, reasonCode });
+export const updateAppUserBirthDate = (id: number, birthDate: string, reasonCode: string) =>
+  requestClient.put(`/users/${id}/birth-date`, { birthDate, reasonCode });
 export const adjustAppUserQuota = (id: number, data: Record<string, unknown>, key: string) =>
   requestClient.post(`/users/${id}/quota-adjustments`, data, { headers: { 'Idempotency-Key': key } });
 export const adjustAppUserEntitlement = (id: number, data: Record<string, unknown>, key: string) =>

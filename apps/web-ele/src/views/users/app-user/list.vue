@@ -10,7 +10,7 @@ import {
   getDeletionRequest, listDeletionRequests, reviewDeletionRequest,
   listAppUserBindings, listAppUserDevices, listAppUserIdentityConflicts,
   listAppUserSessions, listAppUsers, revokeAppUserSession,
-  revokeAppUserSessions, updateAppUserStatus,
+  revokeAppUserSessions, updateAppUserBirthDate, updateAppUserStatus,
 } from '#/api/app-users';
 import type { AppUserDetail, AppUserRow } from '#/api/app-users';
 import { getOrder, listAppUserOrders, listCoinLedger, listEntitlementLedger } from '#/api/commerce';
@@ -24,6 +24,7 @@ import AdminTime from '#/components/admin-time.vue';
 const { hasAccessByCodes } = useAccess();
 const canRevoke = computed(() => hasAccessByCodes(['account_user.session.revoke']));
 const canStatus = computed(() => hasAccessByCodes(['account_user.status.update']));
+const canUpdateBirthDate = computed(() => hasAccessByCodes(['account_user.birth_date.update']));
 const canQuota = computed(() => hasAccessByCodes(['quota.adjust']));
 const canEntitlement = computed(() => hasAccessByCodes(['entitlement.adjust']));
 const canReviewDeletion = computed(() => hasAccessByCodes(['account_user.deletion.review']));
@@ -62,10 +63,10 @@ const activityCursor = ref<string | null>(null);
 const activityLoading = ref(false);
 let activityRevision = 0;
 const actionOpen = ref(false);
-const action = ref<'entitlement' | 'quota' | 'status'>('status');
+const action = ref<'birth-date' | 'entitlement' | 'quota' | 'status'>('status');
 const saving = ref(false);
 const actionKey = ref('');
-const actionForm = reactive({ status: 'active', quotaType: 'bottle_send', amount: 1, entitlementType: '', reasonCode: '', note: '' });
+const actionForm = reactive({ status: 'active', birthDate: '', quotaType: 'bottle_send', amount: 1, entitlementType: '', reasonCode: '', note: '' });
 const deletionOpen = ref(false);
 const deletionRows = ref<Record<string, any>[]>([]);
 const deletionCursor = ref<string | null>(null);
@@ -211,10 +212,10 @@ async function revokeOne(sessionId: number) {
   await refreshDetail();
 }
 
-function openAction(kind: 'entitlement' | 'quota' | 'status') {
+function openAction(kind: 'birth-date' | 'entitlement' | 'quota' | 'status') {
   action.value = kind;
   actionKey.value = crypto.randomUUID();
-  Object.assign(actionForm, { status: 'active', quotaType: 'bottle_send', amount: 1, entitlementType: '', reasonCode: '', note: '' });
+  Object.assign(actionForm, { status: 'active', birthDate: detail.value?.profile?.birthDate || '', quotaType: 'bottle_send', amount: 1, entitlementType: '', reasonCode: '', note: '' });
   actionOpen.value = true;
 }
 
@@ -226,6 +227,11 @@ async function submitAction() {
   try {
     if (action.value === 'status') {
       await updateAppUserStatus(detailUserId.value, actionForm.status, actionForm.reasonCode);
+    } else if (action.value === 'birth-date') {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(actionForm.birthDate)) {
+        ElMessage.error('请选择有效的出生日期'); return;
+      }
+      await updateAppUserBirthDate(detailUserId.value, actionForm.birthDate, actionForm.reasonCode);
     } else if (action.value === 'quota') {
       if (!Number.isInteger(actionForm.amount) || actionForm.amount === 0) { ElMessage.error('调整数量必须是非零整数'); return; }
       await adjustAppUserQuota(detailUserId.value, {
@@ -338,6 +344,7 @@ onMounted(() => { void load(); });
       <template v-else>
         <div class="mb-5 flex flex-wrap gap-2">
           <ElButton v-if="canStatus" @click="openAction('status')">调整状态</ElButton>
+          <ElButton v-if="canUpdateBirthDate" @click="openAction('birth-date')">更正出生日期</ElButton>
           <ElButton v-if="canQuota" @click="openAction('quota')">调整一次性额度</ElButton>
           <ElButton v-if="canEntitlement" @click="openAction('entitlement')">正向权益补发</ElButton>
           <ElButton v-if="canRevoke" type="warning" @click="revokeAll">强制退出全部会话</ElButton>
@@ -349,6 +356,7 @@ onMounted(() => { void load(); });
               <ElDescriptionsItem label="状态">{{ statusLabel(detail.user.status) }}</ElDescriptionsItem>
               <ElDescriptionsItem label="昵称">{{ detail.profile?.nickname || '—' }}</ElDescriptionsItem>
               <ElDescriptionsItem label="国家">{{ detail.profile?.countryCode || '—' }}</ElDescriptionsItem>
+              <ElDescriptionsItem v-if="canUpdateBirthDate" label="出生日期">{{ detail.profile?.birthDate || '—' }}</ElDescriptionsItem>
               <ElDescriptionsItem label="注册时间"><AdminTime :value="detail.user.registeredAt" /></ElDescriptionsItem>
               <ElDescriptionsItem label="最近活跃"><AdminTime :value="detail.user.lastActiveAt" /></ElDescriptionsItem>
               <ElDescriptionsItem label="当前处罚">{{ detail.risk?.activePenaltyTypes?.join('、') || '无' }}</ElDescriptionsItem>
@@ -398,14 +406,16 @@ onMounted(() => { void load(); });
       <template v-if="orderDetail"><ElDescriptions :column="2" border><ElDescriptionsItem label="订单号">{{ orderDetail.order.orderNo }}</ElDescriptionsItem><ElDescriptionsItem label="状态">{{ orderDetail.order.status }}</ElDescriptionsItem><ElDescriptionsItem label="商品">{{ orderDetail.order.internalCode }}</ElDescriptionsItem><ElDescriptionsItem label="金额">{{ orderDetail.order.amountMinor }} {{ orderDetail.order.currency }}（最小货币单位）</ElDescriptionsItem></ElDescriptions><ElDivider>支付交易</ElDivider><ElTable :data="orderDetail.transactions"><ElTableColumn prop="transactionId" label="交易 ID" /><ElTableColumn prop="transactionType" label="类型" /><ElTableColumn prop="status" label="状态" /><ElTableColumn prop="verifiedAt" label="验证时间"><template #default="{ row }"><AdminTime :value="row.verifiedAt" /></template></ElTableColumn></ElTable><ElDivider>权益流水</ElDivider><ElTable :data="orderDetail.entitlementLedger"><ElTableColumn prop="ledgerId" label="流水 ID" /><ElTableColumn prop="entitlementType" label="权益" /><ElTableColumn prop="changeAmount" label="变动" /><ElTableColumn prop="createdAt" label="时间"><template #default="{ row }"><AdminTime :value="row.createdAt" /></template></ElTableColumn></ElTable><ElDivider>金币流水</ElDivider><ElTable :data="orderDetail.coinLedger"><ElTableColumn prop="ledgerId" label="流水 ID" /><ElTableColumn prop="amount" label="变动" /><ElTableColumn prop="createdAt" label="时间"><template #default="{ row }"><AdminTime :value="row.createdAt" /></template></ElTableColumn></ElTable></template>
     </ElDialog>
 
-    <ElDialog v-model="actionOpen" :title="action === 'status' ? '调整用户状态' : action === 'quota' ? '调整一次性额度' : '正向权益补发'" width="520px" destroy-on-close>
+    <ElDialog v-model="actionOpen" :title="action === 'status' ? '调整用户状态' : action === 'birth-date' ? '更正出生日期' : action === 'quota' ? '调整一次性额度' : '正向权益补发'" width="520px" destroy-on-close>
+      <ElAlert v-if="action === 'birth-date'" title="更正会修改用户资料并重新记录最低年龄核验时间；服务端按业务时区校验年龄须在 18 至 120 岁之间。此操作将写入敏感访问审计和资料变更记录。" type="warning" show-icon :closable="false" class="mb-4" />
       <ElForm label-position="top" @submit.prevent="submitAction">
         <ElFormItem v-if="action === 'status'" label="目标状态"><ElSelect v-model="actionForm.status" class="w-full"><ElOption label="正常" value="active" /><ElOption label="暂停" value="suspended" /><ElOption label="封禁" value="banned" /></ElSelect></ElFormItem>
+        <ElFormItem v-if="action === 'birth-date'" label="更正后的出生日期"><ElDatePicker v-model="actionForm.birthDate" type="date" value-format="YYYY-MM-DD" placeholder="选择出生日期" class="!w-full" /></ElFormItem>
         <ElFormItem v-if="action === 'quota'" label="额度类型"><ElSelect v-model="actionForm.quotaType" class="w-full"><ElOption label="投放漂流瓶" value="bottle_send" /><ElOption label="获取漂流瓶" value="bottle_pick" /></ElSelect></ElFormItem>
         <ElFormItem v-if="action === 'entitlement'" label="权益类型"><ElInput v-model="actionForm.entitlementType" placeholder="输入已配置的权益类型代码" /></ElFormItem>
-        <ElFormItem v-if="action !== 'status'" :label="action === 'quota' ? '调整数量（负数为扣减）' : '补发数量（仅正数）'"><ElInputNumber v-model="actionForm.amount" :min="action === 'quota' ? -10000 : 1" :max="10000" /></ElFormItem>
+        <ElFormItem v-if="action === 'quota' || action === 'entitlement'" :label="action === 'quota' ? '调整数量（负数为扣减）' : '补发数量（仅正数）'"><ElInputNumber v-model="actionForm.amount" :min="action === 'quota' ? -10000 : 1" :max="10000" /></ElFormItem>
         <ElFormItem label="原因代码"><ElInput v-model="actionForm.reasonCode" placeholder="例如 support_correction" /></ElFormItem>
-        <ElFormItem v-if="action !== 'status'" label="备注"><ElInput v-model="actionForm.note" type="textarea" /></ElFormItem>
+        <ElFormItem v-if="action === 'quota' || action === 'entitlement'" label="备注"><ElInput v-model="actionForm.note" type="textarea" /></ElFormItem>
       </ElForm>
       <template #footer><ElButton @click="actionOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="submitAction">确认</ElButton></template>
     </ElDialog>
