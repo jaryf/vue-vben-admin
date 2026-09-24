@@ -39,6 +39,7 @@ export async function refreshTokenApi() {
     '/system/auth/refresh',
     undefined,
     {
+      headers: { 'X-Request-Id': crypto.randomUUID() },
       withCredentials: true,
     },
   );
