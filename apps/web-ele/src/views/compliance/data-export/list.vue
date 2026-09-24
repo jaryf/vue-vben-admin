@@ -32,12 +32,14 @@ const datasetLabels: Record<string, string> = {
   orders: '订单', payment_transactions: '支付交易', subscriptions: '订阅',
   entitlement_ledger: '权益账本', coin_ledger: '金币账本',
   bottles: '漂流瓶业务字段与内容',
+  risk_events: '风险事件',
 };
 const datasetPermissions: Record<string, string[]> = {
   audit_logs: ['audit_log.read'], finance_reviews: ['finance_review.read'],
   orders: ['order.read'], payment_transactions: ['order.read'], subscriptions: ['order.read'],
   entitlement_ledger: ['order.read'], coin_ledger: ['order.read'],
   bottles: ['bottle.read', 'bottle.content.read_sensitive'],
+  risk_events: ['risk_event.read'],
 };
 const canUseDataset = (dataset: string) => (datasetPermissions[dataset] || []).every((code) => hasAccessByCodes([code])) && !!datasetPermissions[dataset];
 const selectableDatasets = computed(() => Object.entries(datasetLabels).filter(([value]) => canUseDataset(value)));
@@ -93,7 +95,7 @@ onMounted(() => { void load(); });
 
 <template>
   <div class="p-5"><ElCard shadow="never"><template #header><div class="flex items-center justify-between"><span>异步数据导出</span><ElButton v-if="canRequest" type="primary" @click="openEditor">申请导出</ElButton></div></template>
-    <ElAlert class="mb-4" type="info" show-icon :closable="false" title="可按权限导出审计与财务元数据、商业化字段及漂流瓶内容。漂流瓶导出还需敏感内容查看权限。单次最多 30 天、10,000 行；申请人与审批人必须不同。生成后 24 小时过期，下载链接仅可使用一次、最长有效 60 秒。" />
+    <ElAlert class="mb-4" type="info" show-icon :closable="false" title="可按权限导出审计与财务元数据、商业化字段、漂流瓶内容及风险事件。漂流瓶导出还需敏感内容查看权限。单次最多 30 天、10,000 行；申请人与审批人必须不同。生成后 24 小时过期，下载链接仅可使用一次、最长有效 60 秒。" />
     <div class="mb-4 flex gap-3"><ElSelect v-model="status" clearable placeholder="全部状态" class="!w-36"><ElOption label="待审批" value="pending" /><ElOption label="排队生成" value="queued" /><ElOption label="可下载" value="ready" /><ElOption label="已驳回" value="rejected" /><ElOption label="已过期" value="expired" /><ElOption label="生成失败" value="failed" /></ElSelect><ElButton @click="search">查询</ElButton><ElButton @click="load(cursorStack.at(-1) || '')">刷新</ElButton></div>
     <ElTable v-loading="loading" :data="rows" row-key="exportId"><ElTableColumn prop="exportId" label="任务 ID" width="95" /><ElTableColumn label="数据集" min-width="155"><template #default="{ row }">{{ datasetText(row.dataset) }}</template></ElTableColumn><ElTableColumn label="状态" width="105"><template #default="{ row }">{{ statusText(row.status) }}</template></ElTableColumn><ElTableColumn prop="requestedBy" label="申请人" width="95" /><ElTableColumn prop="reviewedBy" label="审批人" width="95" /><ElTableColumn prop="rowCount" label="行数" width="85" /><ElTableColumn prop="expiresAt" label="下载截止" min-width="175" /><ElTableColumn label="操作" width="210" fixed="right"><template #default="{ row }"><ElButton link type="primary" @click="openDetail(row)">详情</ElButton><ElButton v-if="canApprove && canUseDataset(row.dataset) && row.status === 'pending' && row.requestedBy !== currentUserId" link type="success" @click="review(row, true)">批准</ElButton><ElButton v-if="canApprove && canUseDataset(row.dataset) && row.status === 'pending' && row.requestedBy !== currentUserId" link type="warning" @click="review(row, false)">驳回</ElButton><ElButton v-if="canDownload && canUseDataset(row.dataset) && row.status === 'ready' && row.requestedBy === currentUserId && row.expiresAt && new Date(row.expiresAt).getTime() > Date.now()" link type="primary" @click="download(row)">下载</ElButton></template></ElTableColumn></ElTable><div class="mt-4 flex justify-end gap-2"><ElButton :disabled="cursorStack.length === 0" @click="previous">上一页</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton></div>
   </ElCard><ElDrawer v-model="detailOpen" title="导出任务详情" size="55%" @closed="detail = null"><ElDescriptions v-if="detail" :column="1" border><ElDescriptionsItem label="任务 ID">{{ detail.exportId }}</ElDescriptionsItem><ElDescriptionsItem label="数据集">{{ datasetText(detail.dataset) }}</ElDescriptionsItem><ElDescriptionsItem label="用途">{{ detail.purpose }}</ElDescriptionsItem><ElDescriptionsItem label="时间范围">{{ detail.fromAt }} ～ {{ detail.toAt }}</ElDescriptionsItem><ElDescriptionsItem label="状态">{{ statusText(detail.status) }}</ElDescriptionsItem><ElDescriptionsItem label="审批意见">{{ detail.reviewNote || '—' }}</ElDescriptionsItem><ElDescriptionsItem label="生成行数">{{ detail.rowCount ?? '—' }}</ElDescriptionsItem><ElDescriptionsItem label="文件 SHA-256">{{ detail.fileSha256 || '—' }}</ElDescriptionsItem><ElDescriptionsItem label="过期时间">{{ detail.expiresAt || '—' }}</ElDescriptionsItem><ElDescriptionsItem label="失败原因">{{ detail.failureCode || '—' }}</ElDescriptionsItem></ElDescriptions></ElDrawer>
