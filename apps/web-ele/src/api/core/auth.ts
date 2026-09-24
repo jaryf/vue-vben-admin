@@ -51,6 +51,17 @@ export async function logoutApi() {
   });
 }
 
+export interface AdminSession {
+  sessionId: string;
+  active: boolean;
+  idleTimeoutSeconds: number;
+  absoluteTimeoutSeconds: number;
+  singleSession: boolean;
+}
+
+export const getCurrentSessionApi = () =>
+  requestClient.get<AdminSession>('/system/auth/session');
+
 /**
  * 获取用户权限码
  */
