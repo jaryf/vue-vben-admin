@@ -31,4 +31,6 @@ export const getConversation = (id: number, reasonCode: string) => requestClient
 export const listMessages = (params: Record<string, unknown>) => requestClient.get<MessagePage>('/messages', { params });
 export const getMessageContext = (id: string, reasonCode: string) => requestClient.get<MessageContext>(`/messages/${id}`, { params: { reasonCode } });
 export const getExtendedMessageContext = (id: string, reasonCode: string) => requestClient.get<MessageContext>(`/messages/${id}/context-extended`, { params: { reasonCode } });
+export const getMessageMediaPreview = (id: string, reasonCode: string) =>
+  requestClient.download<Blob>(`/messages/${id}/media-preview?reasonCode=${encodeURIComponent(reasonCode)}`);
 export const removeMessage = (id: string, reasonCode: string) => requestClient.post<MessageRow>(`/messages/${id}/remove`, { reasonCode });
