@@ -9,12 +9,14 @@ export interface ConfigVersion {
   schemaVersion: number;
   payload: { flags: Record<string, boolean> } | { blockedTerms?: string[]; regexRules?: string[]; blockedDomains?: string[]; shortlinkDomains?: string[]; riskThresholds?: { medium: number; high: number; critical: number; manualReviewBelow: number } } |
     { maxPercent: number; rolloutPercent: number; languageOverrides?: Record<string, number>; targetInterestTagIds?: number[]; dailyWindowStart?: string; dailyWindowEnd?: string; maxExposurePerBottle?: number };
-  status: 'draft' | 'reviewing' | 'approved' | 'published' | 'retired';
+  status: 'draft' | 'reviewing' | 'approved' | 'scheduled' | 'published' | 'retired';
   requestedBy: number;
   reviewedBy: null | number;
   reviewNote: null | string;
   publishedBy: null | number;
   publishedAt: null | string;
+  scheduledAt: null | string;
+  scheduledBy: null | number;
   rollbackOf: null | number;
   createdAt: string;
   updatedAt: string;
@@ -31,5 +33,9 @@ export const submitConfigVersion = (id: number) => requestClient.post<ConfigVers
 export const approveConfigVersion = (id: number, note: string) => requestClient.post<ConfigVersion>(`/config-versions/${id}/approve`, { note });
 export const rejectConfigVersion = (id: number, note: string) => requestClient.post<ConfigVersion>(`/config-versions/${id}/reject`, { note });
 export const publishConfigVersion = (id: number) => requestClient.post<ConfigVersion>(`/config-versions/${id}/publish`);
+export const scheduleConfigVersion = (id: number, publishAt: string) =>
+  requestClient.post<ConfigVersion>(`/config-versions/${id}/schedule`, { publishAt });
+export const cancelScheduledConfigVersion = (id: number) =>
+  requestClient.post<ConfigVersion>(`/config-versions/${id}/cancel-schedule`);
 export const rollbackConfigVersion = (id: number, version: string, key: string) =>
   requestClient.post<ConfigVersion>(`/config-versions/${id}/rollback`, { version }, { headers: { 'Idempotency-Key': key } });
