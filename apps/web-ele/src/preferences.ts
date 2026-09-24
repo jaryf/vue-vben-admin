@@ -1,7 +1,4 @@
-import {
-  appCopyrightPreferences,
-  defineOverridesPreferences,
-} from '@vben/preferences';
+import { defineOverridesPreferences } from '@vben/preferences';
 
 /**
  * @description 项目配置文件
@@ -18,5 +15,9 @@ export const overridesPreferences = defineOverridesPreferences({
     name: import.meta.env.VITE_APP_TITLE,
     timezone: 'Asia/Kolkata',
   },
-  copyright: appCopyrightPreferences,
+  copyright: { enable: false, settingShow: false },
+  logo: {
+    source: '/driftly-mark.svg',
+    sourceDark: '/driftly-mark.svg',
+  },
 });
