@@ -6,6 +6,7 @@ import { useAccessStore, useUserStore } from '@vben/stores';
 import { startProgress, stopProgress } from '@vben/utils';
 
 import { accessRoutes, coreRouteNames } from '#/router/routes';
+import { getMFAStatusApi } from '#/api/core/auth';
 import { useAuthStore } from '#/store';
 
 import { generateAccess } from './access';
@@ -52,7 +53,11 @@ function setupAccessGuard(router: Router) {
 
     // 基本路由，这些路由不需要进入权限拦截
     if (coreRouteNames.includes(to.name as string)) {
+      if ((to.name === 'Profile' || to.name === 'ProfileSettings') && !accessStore.accessToken) {
+        return { path: LOGIN_PATH, replace: true };
+      }
       if (to.path === LOGIN_PATH && accessStore.accessToken) {
+        if (!(await getMFAStatusApi()).enabled) return '/auth/mfa-setup';
         return decodeURIComponent(
           (to.query?.redirect as string) ||
             userStore.userInfo?.homePath ||
@@ -83,6 +88,10 @@ function setupAccessGuard(router: Router) {
         };
       }
       return to;
+    }
+
+    if (!(await getMFAStatusApi()).enabled) {
+      return to.path === '/auth/mfa-setup' ? true : '/auth/mfa-setup';
     }
 
     // 是否已经生成过动态路由

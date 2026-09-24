@@ -11,7 +11,12 @@ import {
 export const overridesPreferences = defineOverridesPreferences({
   // overrides
   app: {
+    accessMode: 'backend',
+    defaultHomePath: '/workspace',
+    enableRefreshToken: true,
+    locale: 'zh-CN',
     name: import.meta.env.VITE_APP_TITLE,
+    timezone: 'Asia/Kolkata',
   },
   copyright: appCopyrightPreferences,
 });

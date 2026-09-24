@@ -1,63 +1,43 @@
 <script setup lang="ts">
-import type { VbenFormSchema } from '#/adapter/form';
-
-import { computed } from 'vue';
-
-import { ProfilePasswordSetting, z } from '@vben/common-ui';
+import { reactive, ref } from 'vue';
 
 import { ElMessage } from 'element-plus';
 
-const formSchema = computed((): VbenFormSchema[] => {
-  return [
-    {
-      fieldName: 'oldPassword',
-      label: '旧密码',
-      component: 'VbenInputPassword',
-      componentProps: {
-        placeholder: '请输入旧密码',
-      },
-    },
-    {
-      fieldName: 'newPassword',
-      label: '新密码',
-      component: 'VbenInputPassword',
-      componentProps: {
-        passwordStrength: true,
-        placeholder: '请输入新密码',
-      },
-    },
-    {
-      fieldName: 'confirmPassword',
-      label: '确认密码',
-      component: 'VbenInputPassword',
-      componentProps: {
-        passwordStrength: true,
-        placeholder: '请再次输入新密码',
-      },
-      dependencies: {
-        rules(values) {
-          const { newPassword } = values;
-          return z
-            .string({ error: '请再次输入新密码' })
-            .min(1, { message: '请再次输入新密码' })
-            .refine((value) => value === newPassword, {
-              message: '两次输入的密码不一致',
-            });
-        },
-        triggerFields: ['newPassword'],
-      },
-    },
-  ];
-});
+import { changeAdminPasswordApi } from '#/api/core/user';
+import { useAuthStore } from '#/store';
 
-function handleSubmit() {
-  ElMessage.success('密码修改成功');
+const form = reactive({ oldPassword: '', newPassword: '', confirmPassword: '' });
+const busy = ref(false);
+const authStore = useAuthStore();
+
+async function save() {
+  if (!form.oldPassword || form.newPassword.length < 8) {
+    ElMessage.error('请输入当前密码和至少 8 位的新密码');
+    return;
+  }
+  if (form.newPassword !== form.confirmPassword) {
+    ElMessage.error('两次输入的新密码不一致');
+    return;
+  }
+  busy.value = true;
+  try {
+    await changeAdminPasswordApi(form.oldPassword, form.newPassword);
+    form.oldPassword = '';
+    form.newPassword = '';
+    form.confirmPassword = '';
+    ElMessage.success('密码已修改，请重新登录');
+    await authStore.logout(false);
+  } finally {
+    busy.value = false;
+  }
 }
 </script>
+
 <template>
-  <ProfilePasswordSetting
-    class="w-1/3"
-    :form-schema="formSchema"
-    @submit="handleSubmit"
-  />
+  <ElForm label-position="top" class="max-w-xl" @submit.prevent="save">
+    <ElFormItem label="当前密码"><ElInput v-model="form.oldPassword" type="password" show-password autocomplete="current-password" /></ElFormItem>
+    <ElFormItem label="新密码"><ElInput v-model="form.newPassword" type="password" show-password autocomplete="new-password" /></ElFormItem>
+    <ElFormItem label="确认新密码"><ElInput v-model="form.confirmPassword" type="password" show-password autocomplete="new-password" /></ElFormItem>
+    <ElButton type="primary" native-type="submit" :loading="busy">修改密码</ElButton>
+  </ElForm>
 </template>

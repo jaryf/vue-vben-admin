@@ -47,7 +47,7 @@ async function bootstrap(namespace: string) {
   await setupI18n(app);
 
   // 配置 pinia-tore
-  await initStores(app, { namespace });
+  await initStores(app, { namespace, sessionOnly: true });
 
   // 安装权限指令
   registerAccessDirective(app);

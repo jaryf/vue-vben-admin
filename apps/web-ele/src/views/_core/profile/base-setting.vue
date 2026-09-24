@@ -1,65 +1,49 @@
 <script setup lang="ts">
-import type { BasicOption } from '@vben/types';
+import { onMounted, reactive, ref } from 'vue';
 
-import type { VbenFormSchema } from '#/adapter/form';
+import { useUserStore } from '@vben/stores';
 
-import { computed, onMounted, ref } from 'vue';
+import { ElMessage } from 'element-plus';
 
-import { ProfileBaseSetting } from '@vben/common-ui';
+import { getUserInfoApi, updateAdminProfileApi } from '#/api/core/user';
 
-import { getUserInfoApi } from '#/api';
-
-const profileBaseSettingRef = ref();
-
-const MOCK_ROLES_OPTIONS: BasicOption[] = [
-  {
-    label: '管理员',
-    value: 'super',
-  },
-  {
-    label: '用户',
-    value: 'user',
-  },
-  {
-    label: '测试',
-    value: 'test',
-  },
-];
-
-const formSchema = computed((): VbenFormSchema[] => {
-  return [
-    {
-      fieldName: 'realName',
-      component: 'Input',
-      label: '姓名',
-    },
-    {
-      fieldName: 'username',
-      component: 'Input',
-      label: '用户名',
-    },
-    {
-      fieldName: 'roles',
-      component: 'Select',
-      componentProps: {
-        mode: 'tags',
-        options: MOCK_ROLES_OPTIONS,
-      },
-      label: '角色',
-    },
-    {
-      fieldName: 'introduction',
-      component: 'Textarea',
-      label: '个人简介',
-    },
-  ];
-});
+const userStore = useUserStore();
+const form = reactive({ username: '', realName: '', email: '', phone: '', remark: '' });
+const busy = ref(false);
 
 onMounted(async () => {
-  const data = await getUserInfoApi();
-  profileBaseSettingRef.value.getFormApi().setValues(data);
+  const info = await getUserInfoApi();
+  form.username = info.username || '';
+  form.realName = info.realName || '';
+  form.email = info.email || '';
+  form.phone = info.phone || '';
+  form.remark = info.desc || '';
 });
+
+async function save() {
+  busy.value = true;
+  try {
+    await updateAdminProfileApi({
+      realName: form.realName.trim(),
+      email: form.email.trim(),
+      phone: form.phone.trim(),
+      remark: form.remark.trim(),
+    });
+    userStore.setUserInfo(await getUserInfoApi());
+    ElMessage.success('资料已更新');
+  } finally {
+    busy.value = false;
+  }
+}
 </script>
+
 <template>
-  <ProfileBaseSetting ref="profileBaseSettingRef" :form-schema="formSchema" />
+  <ElForm label-position="top" class="max-w-xl" @submit.prevent="save">
+    <ElFormItem label="管理员用户名"><ElInput v-model="form.username" disabled /></ElFormItem>
+    <ElFormItem label="姓名"><ElInput v-model="form.realName" maxlength="50" /></ElFormItem>
+    <ElFormItem label="邮箱"><ElInput v-model="form.email" type="email" /></ElFormItem>
+    <ElFormItem label="联系电话"><ElInput v-model="form.phone" maxlength="20" /></ElFormItem>
+    <ElFormItem label="备注"><ElInput v-model="form.remark" type="textarea" /></ElFormItem>
+    <ElButton type="primary" native-type="submit" :loading="busy">保存资料</ElButton>
+  </ElForm>
 </template>

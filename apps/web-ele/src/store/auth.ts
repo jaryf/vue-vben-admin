@@ -33,7 +33,11 @@ export const useAuthStore = defineStore('auth', () => {
     let userInfo: null | UserInfo = null;
     try {
       loginLoading.value = true;
-      const { accessToken } = await loginApi(params);
+      const { accessToken, mfaEnabled, mfaRequired } = await loginApi(params);
+
+      if (mfaRequired) {
+        return { userInfo: null, mfaRequired: true };
+      }
 
       // 如果成功获取到 accessToken
       if (accessToken) {
@@ -51,7 +55,9 @@ export const useAuthStore = defineStore('auth', () => {
         userStore.setUserInfo(userInfo);
         accessStore.setAccessCodes(accessCodes);
 
-        if (accessStore.loginExpired) {
+        if (!mfaEnabled) {
+          await router.push('/auth/mfa-setup');
+        } else if (accessStore.loginExpired) {
           accessStore.setLoginExpired(false);
         } else {
           onSuccess
@@ -75,6 +81,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     return {
       userInfo,
+      mfaRequired: false,
     };
   }
 

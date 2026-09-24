@@ -51,7 +51,7 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
   async function doRefreshToken() {
     const accessStore = useAccessStore();
     const resp = await refreshTokenApi();
-    const newToken = resp.data;
+    const newToken = resp.data.data;
     accessStore.setAccessToken(newToken);
     return newToken;
   }
@@ -67,6 +67,9 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
 
       config.headers.Authorization = formatToken(accessStore.accessToken);
       config.headers['Accept-Language'] = preferences.app.locale;
+      if (config.method && config.method.toUpperCase() !== 'GET') {
+        config.headers['X-Request-Id'] = crypto.randomUUID();
+      }
       return config;
     },
   });
@@ -76,7 +79,7 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
     defaultResponseInterceptor({
       codeField: 'code',
       dataField: 'data',
-      successCode: 0,
+      successCode: 'OK',
     }),
   );
 
@@ -108,6 +111,7 @@ function createRequestClient(baseURL: string, options?: RequestClientOptions) {
 
 export const requestClient = createRequestClient(apiURL, {
   responseReturn: 'data',
+  withCredentials: true,
 });
 
 export const baseRequestClient = new RequestClient({ baseURL: apiURL });

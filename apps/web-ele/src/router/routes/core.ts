@@ -57,38 +57,24 @@ const coreRoutes: RouteRecordRaw[] = [
         },
       },
       {
-        name: 'CodeLogin',
-        path: 'code-login',
-        component: () => import('#/views/_core/authentication/code-login.vue'),
-        meta: {
-          title: $t('page.auth.codeLogin'),
-        },
+        name: 'MFASetup',
+        path: 'mfa-setup',
+        component: () => import('#/views/_core/authentication/mfa-setup.vue'),
+        meta: { title: '设置双因素认证' },
       },
+    ],
+  },
+  {
+    component: BasicLayout,
+    name: 'Profile',
+    path: '/profile',
+    meta: { hideInMenu: true, title: '个人中心' },
+    children: [
       {
-        name: 'QrCodeLogin',
-        path: 'qrcode-login',
-        component: () =>
-          import('#/views/_core/authentication/qrcode-login.vue'),
-        meta: {
-          title: $t('page.auth.qrcodeLogin'),
-        },
-      },
-      {
-        name: 'ForgetPassword',
-        path: 'forget-password',
-        component: () =>
-          import('#/views/_core/authentication/forget-password.vue'),
-        meta: {
-          title: $t('page.auth.forgetPassword'),
-        },
-      },
-      {
-        name: 'Register',
-        path: 'register',
-        component: () => import('#/views/_core/authentication/register.vue'),
-        meta: {
-          title: $t('page.auth.register'),
-        },
+        name: 'ProfileSettings',
+        path: '',
+        component: () => import('#/views/_core/profile/index.vue'),
+        meta: { hideInMenu: true, title: '个人中心' },
       },
     ],
   },
