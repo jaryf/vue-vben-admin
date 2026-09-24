@@ -5,7 +5,7 @@ export interface AppUserRow {
   userId: number; status: string; nickname: null | string; countryCode: null | string;
   interfaceLanguage: null | string; registeredAt: null | string; createdAt: string;
   lastActiveAt: string; activeSessionCount: number; activePenaltyType: null | string;
-  vipActive: boolean;
+  emailBound: boolean; googleBound: boolean; appleBound: boolean; vipActive: boolean;
 }
 export interface AppUserDetail {
   user: Record<string, any>; profile: null | Record<string, any>;
