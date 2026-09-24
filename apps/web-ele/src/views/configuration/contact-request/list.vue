@@ -26,18 +26,22 @@ const detailReason = ref('');
 const replyOpen = ref(false);
 const replyKey = ref('');
 const replyForm = reactive({ subject: '', message: '' });
-const filter = reactive({ status: '', senderEmail: '', assignedAdminId: '', requestId: '' });
+const filter = reactive({ id: '', status: '', senderEmail: '', assignedAdminId: '', requestId: '', language: '', createdRange: [] as Date[] });
 const statuses = [['pending', '待处理'], ['notified', '已通知'], ['notification_failed', '通知失败'], ['resolved', '已解决']];
 function statusText(value: string) { return statuses.find(([key]) => key === value)?.[1] || value; }
 const validReason = (value: string) => /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(value);
 async function load(cursor = '') {
   loading.value = true;
   try {
-    const result = await listContactRequests({ status: filter.status || undefined, senderEmail: filter.senderEmail.trim() || undefined, assignedAdminId: filter.assignedAdminId || undefined, requestId: filter.requestId.trim() || undefined, cursor: cursor || undefined, limit: 20 });
+    const result = await listContactRequests({ contactRequestId: filter.id.trim() || undefined, status: filter.status || undefined, senderEmail: filter.senderEmail.trim() || undefined, assignedAdminId: filter.assignedAdminId || undefined, requestId: filter.requestId.trim() || undefined, language: filter.language.trim().toLowerCase() || undefined, createdFrom: filter.createdRange?.[0]?.toISOString(), createdUntil: filter.createdRange?.[1]?.toISOString(), cursor: cursor || undefined, limit: 20 });
     rows.value = result.items || []; nextCursor.value = result.nextCursor;
   } finally { loading.value = false; }
 }
-function search() { cursorStack.value = []; void load(); }
+function search() {
+  if ([filter.id, filter.assignedAdminId].some((value) => value.trim() && !/^[1-9]\d*$/.test(value.trim()))) { ElMessage.warning('请求 ID 和管理员 ID 必须为正整数'); return; }
+  if (filter.createdRange?.length === 2 && filter.createdRange[0]!.getTime() >= filter.createdRange[1]!.getTime()) { ElMessage.warning('结束时间必须晚于开始时间'); return; }
+  cursorStack.value = []; void load();
+}
 function next() { if (!nextCursor.value) return; cursorStack.value.push(nextCursor.value); void load(nextCursor.value); }
 function previous() { cursorStack.value.pop(); void load(cursorStack.value.at(-1) || ''); }
 async function openDetail(row: ContactRow) {
@@ -77,7 +81,7 @@ onMounted(() => { void load(); });
 <template>
   <div class="p-5"><ElCard shadow="never"><template #header>官网联系请求</template>
     <ElAlert title="邮件通知与回复依赖外部邮件服务。发送失败时保留真实投递状态和错误码，不视为已送达。全文查看需填写审计原因。" type="info" show-icon :closable="false" class="mb-4" />
-    <div class="mb-4 flex flex-wrap gap-3"><ElSelect v-model="filter.status" clearable placeholder="全部状态" class="!w-36"><ElOption v-for="[value, label] in statuses" :key="value" :label="label" :value="value" /></ElSelect><ElInput v-model="filter.senderEmail" placeholder="发件邮箱" clearable class="!w-48" /><ElInput v-model="filter.assignedAdminId" placeholder="分派管理员 ID" clearable class="!w-40" /><ElInput v-model="filter.requestId" placeholder="公共请求 ID" clearable class="!w-44" /><ElButton @click="search">查询</ElButton></div>
+    <div class="mb-4 flex flex-wrap gap-3"><ElInput v-model="filter.id" placeholder="请求 ID" clearable class="!w-32" /><ElSelect v-model="filter.status" clearable placeholder="全部状态" class="!w-36"><ElOption v-for="[value, label] in statuses" :key="value" :label="label" :value="value" /></ElSelect><ElInput v-model="filter.senderEmail" placeholder="发件邮箱" clearable class="!w-48" /><ElInput v-model="filter.assignedAdminId" placeholder="分派管理员 ID" clearable class="!w-40" /><ElInput v-model="filter.requestId" placeholder="公共请求 ID" clearable class="!w-44" /><ElInput v-model="filter.language" placeholder="语言代码" clearable class="!w-36" /><ElDatePicker v-model="filter.createdRange" type="datetimerange" range-separator="至" start-placeholder="提交开始" end-placeholder="提交结束" class="!w-[390px]" /><ElButton @click="search">查询</ElButton></div>
     <ElTable v-loading="loading" :data="rows" row-key="contactRequestId"><ElTableColumn prop="contactRequestId" label="请求 ID" width="100" /><ElTableColumn prop="senderName" label="姓名" width="125" /><ElTableColumn prop="senderEmail" label="邮箱" min-width="190" /><ElTableColumn prop="subject" label="主题" min-width="180" /><ElTableColumn prop="messagePreview" label="消息预览" min-width="220" show-overflow-tooltip /><ElTableColumn label="状态" width="110"><template #default="{ row }">{{ statusText(row.status) }}</template></ElTableColumn><ElTableColumn prop="notificationErrorCode" label="通知错误" min-width="135" /><ElTableColumn prop="createdAt" label="提交时间" min-width="175" /><ElTableColumn label="操作" width="90"><template #default="{ row }"><ElButton link type="primary" @click="openDetail(row)">详情</ElButton></template></ElTableColumn></ElTable>
     <div class="mt-4 flex justify-end gap-2"><ElButton :disabled="cursorStack.length === 0" @click="previous">上一页</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton></div>
   </ElCard><ElDrawer v-model="detailOpen" :title="`联系请求 #${detail?.contactRequestId || ''}`" size="65%" @closed="detail = null"><template v-if="detail"><ElDescriptions :column="2" border><ElDescriptionsItem label="姓名">{{ detail.senderName }}</ElDescriptionsItem><ElDescriptionsItem label="邮箱">{{ detail.senderEmail }}</ElDescriptionsItem><ElDescriptionsItem label="主题">{{ detail.subject }}</ElDescriptionsItem><ElDescriptionsItem label="状态">{{ statusText(detail.status) }}</ElDescriptionsItem><ElDescriptionsItem label="分派管理员">{{ detail.assignedAdminId ?? '未分派' }}</ElDescriptionsItem><ElDescriptionsItem label="公共请求 ID">{{ detail.publicRequestId }}</ElDescriptionsItem></ElDescriptions><ElDivider>来信全文</ElDivider><pre class="whitespace-pre-wrap break-all">{{ detail.message }}</pre><div class="mt-4 flex gap-2"><ElButton v-if="canAssign && detail.status !== 'resolved'" @click="assign">分派</ElButton><ElButton v-if="canReply && detail.status !== 'resolved'" type="primary" @click="openReply">回复</ElButton><ElButton v-if="canResolve && detail.status !== 'resolved'" type="success" @click="resolve">标记已解决</ElButton></div><ElDivider>回复记录</ElDivider><ElTable :data="detail.replies"><ElTableColumn prop="replyId" label="回复 ID" width="90" /><ElTableColumn prop="subject" label="主题" min-width="160" /><ElTableColumn prop="message" label="内容" min-width="220" show-overflow-tooltip /><ElTableColumn prop="deliveryStatus" label="投递状态" width="100" /><ElTableColumn prop="deliveryErrorCode" label="错误码" min-width="145" /><ElTableColumn prop="sentAt" label="发送时间" min-width="165" /></ElTable></template></ElDrawer>
