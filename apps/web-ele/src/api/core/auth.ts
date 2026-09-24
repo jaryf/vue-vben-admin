@@ -76,6 +76,19 @@ export interface AdminSession {
 export const getCurrentSessionApi = () =>
   requestClient.get<AdminSession>('/system/auth/session');
 
+export interface AdminSecurityEvent {
+  eventId: number;
+  eventType: string;
+  success: boolean;
+  statusCode: number;
+  ip: string;
+  occurredAt: string;
+}
+export const listCurrentAdminSecurityEventsApi = (cursor?: string) =>
+  requestClient.get<{ items: AdminSecurityEvent[]; nextCursor: null | string }>(
+    '/system/auth/security-events', { params: { cursor } },
+  );
+
 /**
  * 获取用户权限码
  */
