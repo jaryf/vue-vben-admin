@@ -14,7 +14,13 @@ import type { OrderDetail, ProductRow } from '#/api/commerce';
 const { hasAccessByCodes } = useAccess();
 const canManageProducts = computed(() => hasAccessByCodes(['product.manage']));
 const active = ref<'coins' | 'entitlements' | 'orders' | 'payments' | 'products' | 'subscriptions'>('orders');
-const filter = reactive({ id: '', userId: '', status: '', orderNo: '' });
+const emptyFilter = () => ({
+  id: '', userId: '', status: '', orderNo: '', productType: '', internalCode: '',
+  currency: '', paymentChannel: '', region: '', orderId: '', productId: '',
+  channelTransactionId: '', originalTransactionId: '', transactionType: '',
+  createdRange: [] as Date[], periodEndsRange: [] as Date[],
+});
+const filter = reactive(emptyFilter());
 const rows = ref<Record<string, any>[]>([]);
 const nextCursor = ref<string | null>(null);
 const cursorStack = ref<string[]>([]);
@@ -33,6 +39,19 @@ const statusLabels: Record<string, string> = {
   paused: '暂停', expired: '已过期',
 };
 const statusText = (status: string) => statusLabels[status] || status;
+const statusOptions = computed(() => {
+  const choices: Record<string, string[]> = {
+    orders: ['created', 'pending_payment', 'paid', 'fulfilled', 'closed', 'cancelled', 'refunding', 'refunded', 'revoked', 'chargeback', 'payment_failed', 'fulfillment_failed'],
+    products: ['draft', 'published', 'retired'],
+    payments: ['verified', 'rejected', 'refunded', 'revoked'],
+    subscriptions: ['active', 'grace_period', 'paused', 'expired', 'revoked'],
+  };
+  return choices[active.value] || [];
+});
+const productTypes = [['subscription', '订阅'], ['feature_unlock', '永久权益'], ['coin_pack', '金币包']];
+const channels = [['google_play', 'Google Play'], ['app_store', 'App Store']];
+const internalCodes = ['subscription_weekly', 'subscription_monthly', 'subscription_yearly', 'lifetime_access', 'coins_1000', 'coins_5000', 'coins_100000'];
+const transactionTypes = [['purchase', '购买'], ['renewal', '续订'], ['refund', '退款'], ['revocation', '撤销'], ['chargeback', '拒付'], ['restore', '恢复']];
 const columns = computed(() => ({
   orders: [
     ['orderId', '订单 ID', 100], ['orderNo', '订单号', 190], ['userId', '用户 ID', 100],
@@ -80,14 +99,20 @@ async function load(cursor = '') {
       return;
     }
     const params: Record<string, unknown> = { limit: 20, cursor: cursor || undefined };
+    if (active.value !== 'entitlements' && active.value !== 'coins') {
+      Object.assign(params, {
+        createdFrom: filter.createdRange?.[0]?.toISOString(),
+        createdUntil: filter.createdRange?.[1]?.toISOString(),
+      });
+    }
     if (active.value === 'orders') {
-      Object.assign(params, { orderId: filter.id.trim() || undefined, userId: filter.userId.trim() || undefined, orderNo: filter.orderNo.trim() || undefined, status: filter.status || undefined });
+      Object.assign(params, { orderId: filter.id.trim() || undefined, userId: filter.userId.trim() || undefined, orderNo: filter.orderNo.trim() || undefined, status: filter.status || undefined, productType: filter.productType || undefined, paymentChannel: filter.paymentChannel || undefined });
     } else if (active.value === 'products') {
-      Object.assign(params, { productId: filter.id.trim() || undefined, status: filter.status || undefined });
+      Object.assign(params, { productId: filter.id.trim() || undefined, productType: filter.productType || undefined, internalCode: filter.internalCode || undefined, status: filter.status || undefined, currency: filter.currency.trim().toUpperCase() || undefined, paymentChannel: filter.paymentChannel || undefined, region: filter.region.trim().toUpperCase() || undefined });
     } else if (active.value === 'payments') {
-      Object.assign(params, { transactionId: filter.id.trim() || undefined, userId: filter.userId.trim() || undefined, status: filter.status || undefined });
+      Object.assign(params, { transactionId: filter.id.trim() || undefined, orderId: filter.orderId.trim() || undefined, userId: filter.userId.trim() || undefined, paymentChannel: filter.paymentChannel || undefined, channelTransactionId: filter.channelTransactionId.trim() || undefined, originalTransactionId: filter.originalTransactionId.trim() || undefined, transactionType: filter.transactionType || undefined, status: filter.status || undefined });
     } else if (active.value === 'subscriptions') {
-      Object.assign(params, { subscriptionId: filter.id.trim() || undefined, userId: filter.userId.trim() || undefined, status: filter.status || undefined });
+      Object.assign(params, { subscriptionId: filter.id.trim() || undefined, userId: filter.userId.trim() || undefined, productId: filter.productId.trim() || undefined, paymentChannel: filter.paymentChannel || undefined, originalTransactionId: filter.originalTransactionId.trim() || undefined, status: filter.status || undefined, periodEndsFrom: filter.periodEndsRange?.[0]?.toISOString(), periodEndsUntil: filter.periodEndsRange?.[1]?.toISOString() });
     } else {
       Object.assign(params, { userId: filter.userId.trim() });
     }
@@ -107,10 +132,13 @@ function search() {
     ElMessage.warning('请输入有效的 App 用户 ID 后查询账本');
     return;
   }
+  const ids = [filter.id, filter.userId, filter.orderId, filter.productId].filter(Boolean);
+  if (ids.some((value) => !/^[1-9]\d*$/.test(value.trim()))) { ElMessage.warning('ID 必须为正整数'); return; }
+  if ((filter.createdRange?.length === 2 && filter.createdRange[0]!.getTime() >= filter.createdRange[1]!.getTime()) || (filter.periodEndsRange?.length === 2 && filter.periodEndsRange[0]!.getTime() >= filter.periodEndsRange[1]!.getTime())) { ElMessage.warning('结束时间必须晚于开始时间'); return; }
   cursorStack.value = []; void load();
 }
 function switchTab() {
-  Object.assign(filter, { id: '', userId: '', status: '', orderNo: '' });
+  Object.assign(filter, emptyFilter());
   cursorStack.value = [];
   void load();
 }
@@ -149,7 +177,19 @@ onMounted(() => { void load(); });
         <ElInput v-if="active !== 'entitlements' && active !== 'coins'" v-model="filter.id" :placeholder="active === 'orders' ? '订单 ID' : active === 'products' ? '商品 ID' : active === 'payments' ? '交易 ID' : '订阅 ID'" clearable class="!w-36" />
         <ElInput v-if="active !== 'products'" v-model="filter.userId" placeholder="用户 ID" clearable class="!w-36" />
         <ElInput v-if="active === 'orders'" v-model="filter.orderNo" placeholder="订单号" clearable class="!w-48" />
-        <ElInput v-if="active !== 'entitlements' && active !== 'coins'" v-model="filter.status" placeholder="状态代码" clearable class="!w-40" />
+        <ElInput v-if="active === 'payments'" v-model="filter.orderId" placeholder="关联订单 ID" clearable class="!w-40" />
+        <ElInput v-if="active === 'subscriptions'" v-model="filter.productId" placeholder="商品 ID" clearable class="!w-36" />
+        <ElSelect v-if="active === 'orders' || active === 'products'" v-model="filter.productType" clearable placeholder="商品类型" class="!w-36"><ElOption v-for="[value, label] in productTypes" :key="value" :value="value" :label="label" /></ElSelect>
+        <ElSelect v-if="active === 'products'" v-model="filter.internalCode" clearable filterable placeholder="内部编码" class="!w-52"><ElOption v-for="code in internalCodes" :key="code" :value="code" :label="code" /></ElSelect>
+        <ElInput v-if="active === 'products'" v-model="filter.currency" placeholder="币种，如 INR" maxlength="3" clearable class="!w-36" />
+        <ElInput v-if="active === 'products'" v-model="filter.region" placeholder="地区代码，如 IN" maxlength="16" clearable class="!w-44" />
+        <ElSelect v-if="active !== 'entitlements' && active !== 'coins'" v-model="filter.paymentChannel" clearable placeholder="支付渠道" class="!w-40"><ElOption v-for="[value, label] in channels" :key="value" :value="value" :label="label" /></ElSelect>
+        <ElInput v-if="active === 'payments'" v-model="filter.channelTransactionId" placeholder="渠道交易号" clearable class="!w-48" />
+        <ElInput v-if="active === 'payments' || active === 'subscriptions'" v-model="filter.originalTransactionId" placeholder="原始交易号" clearable class="!w-48" />
+        <ElSelect v-if="active === 'payments'" v-model="filter.transactionType" clearable placeholder="交易类型" class="!w-36"><ElOption v-for="[value, label] in transactionTypes" :key="value" :value="value" :label="label" /></ElSelect>
+        <ElSelect v-if="statusOptions.length" v-model="filter.status" clearable placeholder="状态" class="!w-40"><ElOption v-for="value in statusOptions" :key="value" :value="value" :label="statusText(value)" /></ElSelect>
+        <ElDatePicker v-if="active !== 'entitlements' && active !== 'coins'" v-model="filter.createdRange" type="datetimerange" range-separator="至" start-placeholder="创建开始" end-placeholder="创建结束" class="!w-[390px]" />
+        <ElDatePicker v-if="active === 'subscriptions'" v-model="filter.periodEndsRange" type="datetimerange" range-separator="至" start-placeholder="周期到期开始" end-placeholder="周期到期结束" class="!w-[390px]" />
         <ElButton @click="search">查询</ElButton>
       </div>
       <ElTable v-loading="loading" :data="rows">
