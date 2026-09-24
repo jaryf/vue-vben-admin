@@ -27,7 +27,8 @@ const createKey = ref('');
 const editOpen = ref(false);
 const editing = ref<AIGenerationItem | null>(null);
 const editText = ref('');
-const filter = reactive({ status: '', batchId: '', categoryId: '', languageCode: '', aiRoleId: '', conversationId: '' });
+const filter = reactive({ status: '', batchId: '', categoryId: '', languageCode: '', requestedBy: '', aiRoleId: '', conversationId: '' });
+const appliedFilter = ref<Record<string, unknown>>({});
 const draft = reactive({ categoryId: 0, languageCode: 'en', targetCount: 10, modelConfigVersion: '' });
 
 const labels: Record<string, string> = {
@@ -52,16 +53,13 @@ const reasonCodes = [
 async function load(cursor = '') {
   loading.value = true;
   try {
-    const params: Record<string, unknown> = { cursor: cursor || undefined, limit: 20, status: filter.status || undefined };
+    const params: Record<string, unknown> = { ...appliedFilter.value, cursor: cursor || undefined, limit: 20 };
     let result;
     if (active.value === 'batches') {
-      Object.assign(params, { categoryId: filter.categoryId || undefined, languageCode: filter.languageCode || undefined });
       result = await listGenerationBatches(params);
     } else if (active.value === 'items') {
-      Object.assign(params, { batchId: filter.batchId || undefined, aiRoleId: filter.aiRoleId || undefined });
       result = await listGenerationItems(params);
     } else {
-      Object.assign(params, { conversationId: filter.conversationId || undefined, aiRoleId: filter.aiRoleId || undefined });
       result = await listAIReplyTasks(params);
     }
     rows.value = result.items || [];
@@ -69,11 +67,30 @@ async function load(cursor = '') {
     selectedItems.value = [];
   } finally { loading.value = false; }
 }
-function search() { cursorStack.value = []; void load(); }
-function switchTab() { Object.assign(filter, { status: '', batchId: '', categoryId: '', languageCode: '', aiRoleId: '', conversationId: '' }); search(); }
+function search() {
+  appliedFilter.value = { status: filter.status || undefined };
+  if (active.value === 'batches') Object.assign(appliedFilter.value, {
+    categoryId: filter.categoryId.trim() || undefined,
+    languageCode: filter.languageCode.trim() || undefined,
+    requestedBy: filter.requestedBy.trim() || undefined,
+  });
+  else if (active.value === 'items') Object.assign(appliedFilter.value, {
+    batchId: filter.batchId.trim() || undefined,
+    aiRoleId: filter.aiRoleId.trim() || undefined,
+    categoryId: filter.categoryId.trim() || undefined,
+    languageCode: filter.languageCode.trim() || undefined,
+  });
+  else Object.assign(appliedFilter.value, {
+    conversationId: filter.conversationId.trim() || undefined,
+    aiRoleId: filter.aiRoleId.trim() || undefined,
+  });
+  cursorStack.value = [];
+  void load();
+}
+function switchTab() { Object.assign(filter, { status: '', batchId: '', categoryId: '', languageCode: '', requestedBy: '', aiRoleId: '', conversationId: '' }); search(); }
 function next() { if (!nextCursor.value) return; cursorStack.value.push(nextCursor.value); void load(nextCursor.value); }
 function previous() { cursorStack.value.pop(); void load(cursorStack.value.at(-1) || ''); }
-function viewBatchItems(batchId: number) { active.value = 'items'; filter.status = ''; filter.batchId = String(batchId); cursorStack.value = []; void load(); }
+function viewBatchItems(batchId: number) { active.value = 'items'; Object.assign(filter, { status: '', batchId: String(batchId), categoryId: '', languageCode: '', requestedBy: '', aiRoleId: '', conversationId: '' }); search(); }
 function openCreate() { Object.assign(draft, { categoryId: 0, languageCode: 'en', targetCount: 10, modelConfigVersion: '' }); createKey.value = crypto.randomUUID(); createOpen.value = true; }
 
 async function create() {
@@ -125,7 +142,7 @@ async function replyAction(row: AIReplyTask, action: 'cancel' | 'retry') {
   if (action === 'retry') await retryAIReplyTask(row.taskId); else await cancelAIReplyTask(row.taskId);
   ElMessage.success('任务状态已更新'); await load(cursorStack.value.at(-1) || '');
 }
-onMounted(() => { void load(); });
+onMounted(search);
 </script>
 
 <template>
@@ -137,8 +154,9 @@ onMounted(() => { void load(); });
       <div class="mb-4 flex flex-wrap gap-3">
         <ElSelect v-model="filter.status" clearable placeholder="全部状态" class="!w-44"><ElOption v-for="value in active === 'batches' ? batchStatuses : active === 'items' ? itemStatuses : replyStatuses" :key="value" :label="statusText(value)" :value="value" /></ElSelect>
         <ElInput v-if="active === 'items'" v-model="filter.batchId" placeholder="批次 ID" clearable class="!w-32" />
-        <ElInput v-if="active === 'batches'" v-model="filter.categoryId" placeholder="分类 ID" clearable class="!w-32" />
-        <ElInput v-if="active === 'batches'" v-model="filter.languageCode" placeholder="语言代码" clearable class="!w-32" />
+        <ElInput v-if="active !== 'replies'" v-model="filter.categoryId" placeholder="分类 ID" clearable class="!w-32" />
+        <ElInput v-if="active !== 'replies'" v-model="filter.languageCode" placeholder="语言代码" clearable class="!w-32" />
+        <ElInput v-if="active === 'batches'" v-model="filter.requestedBy" placeholder="申请管理员 ID" clearable class="!w-40" />
         <ElInput v-if="active !== 'batches'" v-model="filter.aiRoleId" placeholder="AI 角色 ID" clearable class="!w-36" />
         <ElInput v-if="active === 'replies'" v-model="filter.conversationId" placeholder="会话 ID" clearable class="!w-36" />
         <ElButton @click="search">查询</ElButton>
