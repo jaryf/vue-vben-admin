@@ -4,7 +4,7 @@ import type { CursorPage } from './app-users';
 
 export interface DataExportTask {
   exportId: number;
-  dataset: 'audit_logs' | 'finance_reviews';
+  dataset: 'audit_logs' | 'coin_ledger' | 'entitlement_ledger' | 'finance_reviews' | 'orders' | 'payment_transactions' | 'subscriptions';
   fromAt: string;
   toAt: string;
   purpose: string;
