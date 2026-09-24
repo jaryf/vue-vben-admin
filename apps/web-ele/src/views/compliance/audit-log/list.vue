@@ -4,6 +4,7 @@ import { onMounted, reactive, ref } from 'vue';
 import { ElMessage } from 'element-plus';
 
 import { requestClient } from '#/api/request';
+import AdminTime from '#/components/admin-time.vue';
 
 interface AuditLog {
   id: number; userId: null | number; username: string; method: string; path: string;
@@ -78,7 +79,7 @@ onMounted(search);
         <ElTableColumn prop="path" label="接口路径" min-width="280" show-overflow-tooltip />
         <ElTableColumn prop="statusCode" label="状态码" width="90" />
         <ElTableColumn prop="latency" label="耗时（毫秒）" width="115" />
-        <ElTableColumn prop="createdAt" label="发生时间" min-width="175" />
+        <ElTableColumn prop="createdAt" label="发生时间" min-width="175"><template #default="{ row }"><AdminTime :value="row.createdAt" /></template></ElTableColumn>
         <ElTableColumn label="操作" width="85"><template #default="{ row }"><ElButton link type="primary" @click="openDetail(row.id)">详情</ElButton></template></ElTableColumn>
       </ElTable>
       <div class="mt-4 flex justify-end"><ElPagination v-model:current-page="page" v-model:page-size="pageSize" :total="total" :page-sizes="[20, 50, 100]" layout="total, sizes, prev, pager, next" @change="load" /></div>
@@ -88,7 +89,7 @@ onMounted(search);
         <ElDescriptionsItem label="管理员">{{ detail.username }}（{{ detail.userId }}）</ElDescriptionsItem>
         <ElDescriptionsItem label="接口">{{ detail.method }} {{ detail.path }}</ElDescriptionsItem>
         <ElDescriptionsItem label="结果">HTTP {{ detail.statusCode }}；{{ detail.latency }} 毫秒</ElDescriptionsItem>
-        <ElDescriptionsItem label="时间">{{ detail.createdAt }}</ElDescriptionsItem>
+        <ElDescriptionsItem label="时间"><AdminTime :value="detail.createdAt" /></ElDescriptionsItem>
         <ElDescriptionsItem label="来源 IP">{{ detail.ip }}</ElDescriptionsItem>
         <ElDescriptionsItem label="失败信息">{{ detail.errorMessage || '—' }}</ElDescriptionsItem>
         <ElDescriptionsItem label="请求审计摘要"><pre class="max-h-48 overflow-auto whitespace-pre-wrap break-all text-xs">{{ detail.requestBody || '未采集' }}</pre></ElDescriptionsItem>

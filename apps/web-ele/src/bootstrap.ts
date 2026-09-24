@@ -2,8 +2,8 @@ import { createApp, watchEffect } from 'vue';
 
 import { registerAccessDirective } from '@vben/access';
 import { registerLoadingDirective } from '@vben/common-ui';
-import { preferences } from '@vben/preferences';
-import { initStores } from '@vben/stores';
+import { DEFAULT_TIME_ZONE_OPTIONS, preferences } from '@vben/preferences';
+import { initStores, setTimezoneHandler } from '@vben/stores';
 import '@vben/styles';
 import '@vben/styles/ele';
 
@@ -18,6 +18,17 @@ import App from './app.vue';
 import { router } from './router';
 
 async function bootstrap(namespace: string) {
+  setTimezoneHandler({
+    getTimezoneOptions: async () => [
+      { label: 'Asia/Kolkata (UTC+05:30)', value: 'Asia/Kolkata' },
+      { label: 'UTC', value: 'UTC' },
+      ...DEFAULT_TIME_ZONE_OPTIONS.map(({ label, timezone }) => ({
+        label,
+        value: timezone,
+      })),
+    ],
+  });
+
   // 初始化组件适配器
   await initComponentAdapter();
 

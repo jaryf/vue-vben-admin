@@ -11,6 +11,7 @@ import {
   listAdminUsers, resetAdminMFA, updateAdminUser,
 } from '#/api/system';
 import type { AdminDept, AdminRole, AdminUser } from '#/api/system';
+import AdminTime from '#/components/admin-time.vue';
 
 const { hasAccessByCodes } = useAccess();
 const userStore = useUserStore();
@@ -145,7 +146,7 @@ onMounted(() => { void load(); void loadOptions(); });
         <ElTableColumn label="角色" min-width="160"><template #default="{ row }">{{ row.roles?.join('、') || '未分配' }}</template></ElTableColumn>
         <ElTableColumn label="状态" width="90"><template #default="{ row }"><ElTag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '正常' : '停用' }}</ElTag></template></ElTableColumn>
         <ElTableColumn label="双因素" width="100"><template #default="{ row }">{{ row.mfaEnabled ? '已启用' : '未启用' }}</template></ElTableColumn>
-        <ElTableColumn prop="createdAt" label="创建时间" min-width="170" />
+        <ElTableColumn prop="createdAt" label="创建时间" min-width="170"><template #default="{ row }"><AdminTime :value="row.createdAt" /></template></ElTableColumn>
         <ElTableColumn v-if="canUpdate || canDelete" label="操作" width="245" fixed="right">
           <template #default="{ row }">
             <ElButton v-if="canUpdate" link type="primary" @click="openEditor(row)">编辑</ElButton>

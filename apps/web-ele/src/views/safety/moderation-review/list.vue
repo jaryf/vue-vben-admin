@@ -5,6 +5,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 
 import { decideReview, getReview, listReviews } from '#/api/moderation';
 import type { ReviewDetail, ReviewRow } from '#/api/moderation';
+import AdminTime from '#/components/admin-time.vue';
 
 const filter = reactive({
   reviewId: '', targetType: '', targetEntityId: '', targetMessageId: '',
@@ -132,7 +133,7 @@ onMounted(() => { void load(); });
         <ElTableColumn label="最终决策" width="105"><template #default="{ row }">{{ decisionText(row.finalDecision) }}</template></ElTableColumn>
         <ElTableColumn prop="evidenceCount" label="证据数" width="90" />
         <ElTableColumn label="等待时长" width="140"><template #default="{ row }">{{ row.status === 'manual_review' ? waitingTime(row.requestedAt) : '—' }}</template></ElTableColumn>
-        <ElTableColumn prop="requestedAt" label="请求时间" min-width="180" />
+        <ElTableColumn prop="requestedAt" label="请求时间" min-width="180"><template #default="{ row }"><AdminTime :value="row.requestedAt" /></template></ElTableColumn>
         <ElTableColumn label="操作" width="85"><template #default="{ row }"><ElButton link type="primary" @click="openDetail(row.reviewId)">详情</ElButton></template></ElTableColumn>
       </ElTable>
       <div class="mt-4 flex justify-end gap-2"><ElButton :disabled="cursorStack.length === 0" @click="previous">上一页</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton></div>
@@ -140,9 +141,9 @@ onMounted(() => { void load(); });
 
     <ElDrawer v-model="detailOpen" :title="`审核记录 #${detail?.review.reviewId || ''}`" size="65%" @closed="clearDetail">
       <template v-if="detail">
-        <ElDescriptions :column="2" border><ElDescriptionsItem label="对象">{{ targetLabels[detail.review.targetType] || detail.review.targetType }} #{{ detail.review.targetEntityId || detail.review.targetMessageId }}</ElDescriptionsItem><ElDescriptionsItem label="场景">{{ detail.review.scene }}</ElDescriptionsItem><ElDescriptionsItem label="状态">{{ statusLabels[detail.review.status] || detail.review.status }}</ElDescriptionsItem><ElDescriptionsItem label="最终决策">{{ decisionText(detail.review.finalDecision) }}</ElDescriptionsItem><ElDescriptionsItem label="风险等级">{{ detail.review.riskLevel }}</ElDescriptionsItem><ElDescriptionsItem label="风险分类">{{ detail.review.categories?.join('、') || '无' }}</ElDescriptionsItem><ElDescriptionsItem label="规则版本">{{ detail.review.ruleVersion }}</ElDescriptionsItem><ElDescriptionsItem label="模型版本">{{ detail.review.modelName }}</ElDescriptionsItem><ElDescriptionsItem label="证据数">{{ detail.review.evidenceCount }}</ElDescriptionsItem><ElDescriptionsItem label="请求时间">{{ detail.review.requestedAt }}</ElDescriptionsItem><ElDescriptionsItem label="完成时间">{{ detail.review.completedAt || '—' }}</ElDescriptionsItem><ElDescriptionsItem label="等待时长">{{ detail.review.status === 'manual_review' ? waitingTime(detail.review.requestedAt) : '—' }}</ElDescriptionsItem></ElDescriptions>
+        <ElDescriptions :column="2" border><ElDescriptionsItem label="对象">{{ targetLabels[detail.review.targetType] || detail.review.targetType }} #{{ detail.review.targetEntityId || detail.review.targetMessageId }}</ElDescriptionsItem><ElDescriptionsItem label="场景">{{ detail.review.scene }}</ElDescriptionsItem><ElDescriptionsItem label="状态">{{ statusLabels[detail.review.status] || detail.review.status }}</ElDescriptionsItem><ElDescriptionsItem label="最终决策">{{ decisionText(detail.review.finalDecision) }}</ElDescriptionsItem><ElDescriptionsItem label="风险等级">{{ detail.review.riskLevel }}</ElDescriptionsItem><ElDescriptionsItem label="风险分类">{{ detail.review.categories?.join('、') || '无' }}</ElDescriptionsItem><ElDescriptionsItem label="规则版本">{{ detail.review.ruleVersion }}</ElDescriptionsItem><ElDescriptionsItem label="模型版本">{{ detail.review.modelName }}</ElDescriptionsItem><ElDescriptionsItem label="证据数">{{ detail.review.evidenceCount }}</ElDescriptionsItem><ElDescriptionsItem label="请求时间"><AdminTime :value="detail.review.requestedAt" /></ElDescriptionsItem><ElDescriptionsItem label="完成时间"><AdminTime :value="detail.review.completedAt" /></ElDescriptionsItem><ElDescriptionsItem label="等待时长">{{ detail.review.status === 'manual_review' ? waitingTime(detail.review.requestedAt) : '—' }}</ElDescriptionsItem></ElDescriptions>
         <ElDivider>脱敏证据</ElDivider>
-        <ElTable :data="detail.evidence"><ElTableColumn prop="evidenceId" label="证据 ID" width="100" /><ElTableColumn prop="sourceType" label="来源" width="130" /><ElTableColumn prop="maskedText" label="脱敏片段" min-width="250" /><ElTableColumn prop="mediaAssetId" label="媒体 ID" width="100" /><ElTableColumn prop="createdAt" label="时间" min-width="180" /></ElTable>
+        <ElTable :data="detail.evidence"><ElTableColumn prop="evidenceId" label="证据 ID" width="100" /><ElTableColumn prop="sourceType" label="来源" width="130" /><ElTableColumn prop="maskedText" label="脱敏片段" min-width="250" /><ElTableColumn prop="mediaAssetId" label="媒体 ID" width="100" /><ElTableColumn prop="createdAt" label="时间" min-width="180"><template #default="{ row }"><AdminTime :value="row.createdAt" /></template></ElTableColumn></ElTable>
         <template v-if="detail.allowedDecisions.length">
           <ElDivider>人工决策</ElDivider>
           <ElForm label-position="top" @submit.prevent="submitDecision">

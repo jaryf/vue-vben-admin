@@ -10,6 +10,7 @@ import {
   updateProductStatus,
 } from '#/api/commerce';
 import type { OrderDetail, ProductRow } from '#/api/commerce';
+import AdminTime from '#/components/admin-time.vue';
 
 const { hasAccessByCodes } = useAccess();
 const canManageProducts = computed(() => hasAccessByCodes(['product.manage']));
@@ -52,6 +53,7 @@ const productTypes = [['subscription', '订阅'], ['feature_unlock', '永久权�
 const channels = [['google_play', 'Google Play'], ['app_store', 'App Store']];
 const internalCodes = ['subscription_weekly', 'subscription_monthly', 'subscription_yearly', 'lifetime_access', 'coins_1000', 'coins_5000', 'coins_100000'];
 const transactionTypes = [['purchase', '购买'], ['renewal', '续订'], ['refund', '退款'], ['revocation', '撤销'], ['chargeback', '拒付'], ['restore', '恢复']];
+const timeColumnKeys = new Set(['createdAt', 'verifiedAt', 'currentPeriodEndsAt', 'effectiveAt', 'expiresAt']);
 const columns = computed(() => ({
   orders: [
     ['orderId', '订单 ID', 100], ['orderNo', '订单号', 190], ['userId', '用户 ID', 100],
@@ -194,7 +196,7 @@ onMounted(() => { void load(); });
       </div>
       <ElTable v-loading="loading" :data="rows">
         <ElTableColumn v-for="column in columns" :key="column[0]" :prop="String(column[0])" :label="String(column[1])" :min-width="Number(column[2])">
-          <template #default="{ row }">{{ column[0] === 'status' ? statusText(row.status) : row[String(column[0])] ?? '—' }}</template>
+          <template #default="{ row }"><AdminTime v-if="timeColumnKeys.has(String(column[0]))" :value="row[String(column[0])]" /><template v-else>{{ column[0] === 'status' ? statusText(row.status) : row[String(column[0])] ?? '—' }}</template></template>
         </ElTableColumn>
         <ElTableColumn v-if="active === 'orders' || active === 'products'" label="操作" width="85" fixed="right"><template #default="{ row }"><ElButton link type="primary" @click="openRow(row)">详情</ElButton></template></ElTableColumn>
       </ElTable>
@@ -204,9 +206,9 @@ onMounted(() => { void load(); });
     <ElDrawer v-model="detailOpen" :title="`订单 #${detail?.order.orderId || ''}`" size="70%">
       <template v-if="detail">
         <ElDescriptions :column="2" border><ElDescriptionsItem label="订单号">{{ detail.order.orderNo }}</ElDescriptionsItem><ElDescriptionsItem label="用户 ID">{{ detail.order.userId }}</ElDescriptionsItem><ElDescriptionsItem label="商品">{{ detail.order.internalCode }}</ElDescriptionsItem><ElDescriptionsItem label="状态">{{ statusText(detail.order.status) }}</ElDescriptionsItem><ElDescriptionsItem label="订单记录金额">{{ detail.order.amountMinor }} {{ detail.order.currency }}（最小单位）</ElDescriptionsItem><ElDescriptionsItem label="商店渠道">{{ detail.order.paymentChannel }}</ElDescriptionsItem></ElDescriptions>
-        <ElDivider>支付交易</ElDivider><ElTable :data="detail.transactions"><ElTableColumn prop="transactionId" label="交易 ID" /><ElTableColumn prop="transactionType" label="类型" /><ElTableColumn prop="status" label="状态" /><ElTableColumn prop="verifiedAt" label="验证时间" /></ElTable>
-        <ElDivider>权益账本</ElDivider><ElTable :data="detail.entitlementLedger"><ElTableColumn prop="ledgerId" label="流水 ID" /><ElTableColumn prop="entitlementType" label="权益" /><ElTableColumn prop="changeAmount" label="变更" /><ElTableColumn prop="balanceAfter" label="余额" /><ElTableColumn prop="createdAt" label="时间" /></ElTable>
-        <ElDivider>金币账本</ElDivider><ElTable :data="detail.coinLedger"><ElTableColumn prop="ledgerId" label="流水 ID" /><ElTableColumn prop="operation" label="操作" /><ElTableColumn prop="amount" label="数量" /><ElTableColumn prop="balanceAfter" label="余额" /><ElTableColumn prop="createdAt" label="时间" /></ElTable>
+        <ElDivider>支付交易</ElDivider><ElTable :data="detail.transactions"><ElTableColumn prop="transactionId" label="交易 ID" /><ElTableColumn prop="transactionType" label="类型" /><ElTableColumn prop="status" label="状态" /><ElTableColumn prop="verifiedAt" label="验证时间"><template #default="{ row }"><AdminTime :value="row.verifiedAt" /></template></ElTableColumn></ElTable>
+        <ElDivider>权益账本</ElDivider><ElTable :data="detail.entitlementLedger"><ElTableColumn prop="ledgerId" label="流水 ID" /><ElTableColumn prop="entitlementType" label="权益" /><ElTableColumn prop="changeAmount" label="变更" /><ElTableColumn prop="balanceAfter" label="余额" /><ElTableColumn prop="createdAt" label="时间"><template #default="{ row }"><AdminTime :value="row.createdAt" /></template></ElTableColumn></ElTable>
+        <ElDivider>金币账本</ElDivider><ElTable :data="detail.coinLedger"><ElTableColumn prop="ledgerId" label="流水 ID" /><ElTableColumn prop="operation" label="操作" /><ElTableColumn prop="amount" label="数量" /><ElTableColumn prop="balanceAfter" label="余额" /><ElTableColumn prop="createdAt" label="时间"><template #default="{ row }"><AdminTime :value="row.createdAt" /></template></ElTableColumn></ElTable>
       </template>
     </ElDrawer>
     <ElDrawer v-model="productOpen" :title="`商品 #${product?.productId || ''}`" size="55%">

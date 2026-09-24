@@ -4,6 +4,7 @@ import { onMounted, ref } from 'vue';
 import { useUserStore } from '@vben/stores';
 
 import { requestClient } from '#/api/request';
+import AdminTime from '#/components/admin-time.vue';
 
 interface Metric { value: number; definition: string }
 interface Rate { percent: null | number; numerator: number; denominator: number; definition: string }
@@ -71,7 +72,9 @@ onMounted(() => { void load(); });
     </div>
     <ElAlert v-if="unavailable" title="统计服务暂时不可用，请稍后重试" type="warning" show-icon :closable="false" />
     <template v-if="overview">
-      <ElAlert :title="`统计范围：${overview.rangeStart} 至 ${overview.rangeEnd}（不含结束时刻）；时区：${overview.timezone}；生成时间：${overview.generatedAt}；读取时实时聚合`" type="info" show-icon :closable="false" class="mb-5" />
+      <ElAlert type="info" show-icon :closable="false" class="mb-5">
+        统计范围：<AdminTime :value="overview.rangeStart" /> 至 <AdminTime :value="overview.rangeEnd" />（不含结束时刻）；统计口径时区：{{ overview.timezone }}；生成时间：<AdminTime :value="overview.generatedAt" />；读取时实时聚合
+      </ElAlert>
       <section v-for="group in metricGroups" :key="group.title" class="mb-6">
         <h2 class="mb-3 text-lg font-medium">{{ group.title }}</h2>
         <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-4">

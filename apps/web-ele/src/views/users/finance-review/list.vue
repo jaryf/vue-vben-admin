@@ -10,6 +10,7 @@ import {
   listFinanceReviews,
 } from '#/api/finance-reviews';
 import type { FinanceReviewAction, FinanceReviewActionInput, FinanceReviewCase } from '#/api/finance-reviews';
+import AdminTime from '#/components/admin-time.vue';
 
 const { hasAccessByCodes } = useAccess();
 const canManage = computed(() => hasAccessByCodes(['finance_review.manage']));
@@ -114,7 +115,7 @@ onMounted(() => { void load(); });
         <ElTableColumn label="状态" width="95"><template #default="{ row }">{{ statusText(row.status) }}</template></ElTableColumn>
         <ElTableColumn prop="assignedTo" label="接手人 ID" width="105" />
         <ElTableColumn label="消费冻结" width="100"><template #default="{ row }">{{ row.spendFrozenAt ? '已冻结' : '未冻结' }}</template></ElTableColumn>
-        <ElTableColumn prop="createdAt" label="记录时间" min-width="175" />
+        <ElTableColumn prop="createdAt" label="记录时间" min-width="175"><template #default="{ row }"><AdminTime :value="row.createdAt" /></template></ElTableColumn>
         <ElTableColumn label="操作" width="85"><template #default="{ row }"><ElButton link type="primary" @click="openDetail(row)">详情</ElButton></template></ElTableColumn>
       </ElTable>
       <div class="mt-4 flex justify-end gap-2"><ElButton :disabled="cursorStack.length === 0" @click="previous">上一页</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton></div>
@@ -128,11 +129,11 @@ onMounted(() => { void load(); });
           <ElDescriptionsItem label="商店事件">{{ detail.provider }} / {{ detail.eventId }}</ElDescriptionsItem>
           <ElDescriptionsItem label="事件时金币余额">{{ detail.coinBalance ?? '不适用' }}</ElDescriptionsItem>
           <ElDescriptionsItem label="应追回金币">{{ detail.coinGrantAmount ?? '不适用' }}</ElDescriptionsItem>
-          <ElDescriptionsItem label="消费冻结时间">{{ detail.spendFrozenAt || '未冻结' }}</ElDescriptionsItem>
+          <ElDescriptionsItem label="消费冻结时间"><AdminTime v-if="detail.spendFrozenAt" :value="detail.spendFrozenAt" /><span v-else>未冻结</span></ElDescriptionsItem>
           <ElDescriptionsItem label="接手管理员 ID">{{ detail.assignedTo || '未分派' }}</ElDescriptionsItem>
           <ElDescriptionsItem label="核验管理员 ID">{{ detail.resolvedBy || '未核验' }}</ElDescriptionsItem>
-          <ElDescriptionsItem label="核验时间">{{ detail.resolvedAt || '—' }}</ElDescriptionsItem>
-          <ElDescriptionsItem label="商店事件时间">{{ detail.occurredAt }}</ElDescriptionsItem>
+          <ElDescriptionsItem label="核验时间"><AdminTime :value="detail.resolvedAt" /></ElDescriptionsItem>
+          <ElDescriptionsItem label="商店事件时间"><AdminTime :value="detail.occurredAt" /></ElDescriptionsItem>
         </ElDescriptions>
         <div v-if="canManage && detail.status !== 'resolved'" class="my-5 flex flex-wrap gap-2">
           <ElButton @click="openAction('assign')">分派处理</ElButton>

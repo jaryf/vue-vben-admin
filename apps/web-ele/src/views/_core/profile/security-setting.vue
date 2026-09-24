@@ -6,6 +6,7 @@ import { ElMessage } from 'element-plus';
 
 import { getMFAStatusApi, listCurrentAdminSecurityEventsApi, regenerateRecoveryCodesApi } from '#/api/core/auth';
 import type { AdminSecurityEvent } from '#/api/core/auth';
+import AdminTime from '#/components/admin-time.vue';
 
 const router = useRouter();
 const enabled = ref<boolean | null>(null);
@@ -89,7 +90,7 @@ async function regenerate() {
       <ElTableColumn label="事件" min-width="170"><template #default="{ row }">{{ eventLabels[row.eventType] || row.eventType }}</template></ElTableColumn>
       <ElTableColumn label="结果" width="100"><template #default="{ row }">{{ row.success ? '成功' : row.eventType === 'login_mfa_required' ? '待验证' : '未完成' }}</template></ElTableColumn>
       <ElTableColumn prop="ip" label="来源 IP" min-width="145" />
-      <ElTableColumn prop="occurredAt" label="发生时间 UTC" min-width="190" />
+      <ElTableColumn prop="occurredAt" label="发生时间" min-width="190"><template #default="{ row }"><AdminTime :value="row.occurredAt" /></template></ElTableColumn>
     </ElTable>
     <div v-if="enabled" class="mt-4 flex justify-end gap-2"><ElButton :disabled="cursorStack.length === 0" @click="previousEvents">上一页</ElButton><ElButton :disabled="!nextCursor" @click="nextEvents">下一页</ElButton></div>
   </div>

@@ -5,6 +5,7 @@ import { ElMessage, ElMessageBox } from 'element-plus';
 
 import { changeAIRoleStatus, createAIRole, getAIRole, listAIRoles, updateAIRole } from '#/api/ai';
 import type { AIRole } from '#/api/ai';
+import AdminTime from '#/components/admin-time.vue';
 
 const rows = ref<AIRole[]>([]);
 const nextCursor = ref<string | null>(null);
@@ -101,7 +102,7 @@ onMounted(() => { void load(); });
     <ElCard shadow="never">
       <template #header><div class="flex items-center justify-between"><span>AI 角色</span><ElButton type="primary" @click="openEditor()">新增角色</ElButton></div></template>
       <div class="mb-4 flex gap-3"><ElSelect v-model="status" clearable placeholder="全部状态" class="!w-40"><ElOption label="启用" value="enabled" /><ElOption label="停用" value="disabled" /></ElSelect><ElButton @click="search">查询</ElButton></div>
-      <ElTable v-loading="loading" :data="rows" row-key="roleId"><ElTableColumn prop="roleId" label="角色 ID" width="95" /><ElTableColumn prop="name" label="名称" min-width="135" /><ElTableColumn label="头像资产 ID" width="120"><template #default="{ row }">{{ row.avatarMediaId ?? '—' }}</template></ElTableColumn><ElTableColumn prop="persona" label="人设" min-width="220" show-overflow-tooltip /><ElTableColumn label="语言" min-width="125"><template #default="{ row }">{{ row.languages?.join('、') }}</template></ElTableColumn><ElTableColumn prop="dailyMessageLimit" label="每日回复上限" width="120" /><ElTableColumn prop="status" label="状态" width="100" /><ElTableColumn prop="createdAt" label="创建时间" min-width="175" /><ElTableColumn label="操作" width="145"><template #default="{ row }"><ElButton link type="primary" @click="openEditor(row)">编辑</ElButton><ElButton link :type="row.status === 'enabled' ? 'warning' : 'success'" @click="toggle(row)">{{ row.status === 'enabled' ? '停用' : '启用' }}</ElButton></template></ElTableColumn></ElTable>
+      <ElTable v-loading="loading" :data="rows" row-key="roleId"><ElTableColumn prop="roleId" label="角色 ID" width="95" /><ElTableColumn prop="name" label="名称" min-width="135" /><ElTableColumn label="头像资产 ID" width="120"><template #default="{ row }">{{ row.avatarMediaId ?? '—' }}</template></ElTableColumn><ElTableColumn prop="persona" label="人设" min-width="220" show-overflow-tooltip /><ElTableColumn label="语言" min-width="125"><template #default="{ row }">{{ row.languages?.join('、') }}</template></ElTableColumn><ElTableColumn prop="dailyMessageLimit" label="每日回复上限" width="120" /><ElTableColumn prop="status" label="状态" width="100" /><ElTableColumn prop="createdAt" label="创建时间" min-width="175"><template #default="{ row }"><AdminTime :value="row.createdAt" /></template></ElTableColumn><ElTableColumn label="操作" width="145"><template #default="{ row }"><ElButton link type="primary" @click="openEditor(row)">编辑</ElButton><ElButton link :type="row.status === 'enabled' ? 'warning' : 'success'" @click="toggle(row)">{{ row.status === 'enabled' ? '停用' : '启用' }}</ElButton></template></ElTableColumn></ElTable>
       <div class="mt-4 flex justify-end gap-2"><ElButton :disabled="cursorStack.length === 0" @click="previous">上一页</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton></div>
     </ElCard>
     <ElDialog v-model="editorOpen" :title="editingId === null ? '新增 AI 角色' : '编辑 AI 角色'" width="650px" destroy-on-close>

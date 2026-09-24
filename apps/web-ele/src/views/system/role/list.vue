@@ -9,6 +9,7 @@ import {
   createAdminRole, deleteAdminRole, listAdminMenus, listAdminRoles, updateAdminRole,
 } from '#/api/system';
 import type { AdminMenu, AdminRole } from '#/api/system';
+import AdminTime from '#/components/admin-time.vue';
 
 const { hasAccessByCodes } = useAccess();
 const canCreate = computed(() => hasAccessByCodes(['system_role.create']));
@@ -106,7 +107,7 @@ onMounted(() => { void load(); });
         <ElTableColumn prop="code" label="角色编码" min-width="150" />
         <ElTableColumn label="状态" width="90"><template #default="{ row }"><ElTag :type="row.status === 1 ? 'success' : 'info'">{{ row.status === 1 ? '正常' : '停用' }}</ElTag></template></ElTableColumn>
         <ElTableColumn prop="remark" label="备注" min-width="160" show-overflow-tooltip />
-        <ElTableColumn prop="createdAt" label="创建时间" min-width="175" />
+        <ElTableColumn prop="createdAt" label="创建时间" min-width="175"><template #default="{ row }"><AdminTime :value="row.createdAt" /></template></ElTableColumn>
         <ElTableColumn v-if="canUpdate || canDelete" label="操作" width="145" fixed="right"><template #default="{ row }"><ElButton v-if="canUpdate" link type="primary" @click="openEditor(row)">编辑</ElButton><ElButton v-if="canDelete" link type="danger" @click="remove(row)">删除</ElButton></template></ElTableColumn>
       </ElTable>
       <div class="mt-4 flex justify-end"><ElPagination v-model:current-page="page" v-model:page-size="pageSize" :total="total" :page-sizes="[20, 50, 100]" layout="total, sizes, prev, pager, next" @change="load" /></div>

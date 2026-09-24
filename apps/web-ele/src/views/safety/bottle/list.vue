@@ -10,6 +10,7 @@ import {
   removeBottle, restoreBottle, retryBottleReview,
 } from '#/api/bottles';
 import type { BottleContent, BottleDetail, BottleRow } from '#/api/bottles';
+import AdminTime from '#/components/admin-time.vue';
 
 const { hasAccessByCodes } = useAccess();
 const canSearchContent = computed(() => hasAccessByCodes(['bottle.content.search_sensitive']));
@@ -150,7 +151,7 @@ onMounted(() => { void load(); });
         <ElTableColumn prop="status" label="状态" min-width="130" />
         <ElTableColumn prop="reviewStatus" label="审核状态" min-width="110" />
         <ElTableColumn prop="reportCount" label="举报数" width="85" />
-        <ElTableColumn prop="createdAt" label="创建时间" min-width="170" />
+        <ElTableColumn prop="createdAt" label="创建时间" min-width="170"><template #default="{ row }"><AdminTime :value="row.createdAt" /></template></ElTableColumn>
         <ElTableColumn label="操作" width="85" fixed="right"><template #default="{ row }"><ElButton link type="primary" @click="openDetail(row.bottleId)">详情</ElButton></template></ElTableColumn>
       </ElTable>
       <div class="mt-4 flex justify-end gap-2"><ElButton :disabled="cursorStack.length === 0" @click="previous">上一页</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton></div>
@@ -169,10 +170,10 @@ onMounted(() => { void load(); });
         <ElTabs v-model="detailTab">
           <ElTabPane label="元数据" name="metadata">
             <ElDescriptions :column="2" border><ElDescriptionsItem label="发布者">{{ detail.bottle.ownerUserId || '匿名' }}</ElDescriptionsItem><ElDescriptionsItem label="来源">{{ detail.bottle.sourceType }}</ElDescriptionsItem><ElDescriptionsItem label="状态">{{ detail.bottle.status }}</ElDescriptionsItem><ElDescriptionsItem label="审核">{{ detail.bottle.reviewStatus }}</ElDescriptionsItem><ElDescriptionsItem label="分类 ID">{{ detail.bottle.categoryId }}</ElDescriptionsItem><ElDescriptionsItem label="已获取/上限">{{ detail.bottle.pickedCount }} / {{ detail.bottle.maxPickCount }}</ElDescriptionsItem></ElDescriptions>
-            <ElDivider>状态记录</ElDivider><ElTable :data="detail.statusLogs"><ElTableColumn prop="fromStatus" label="原状态" /><ElTableColumn prop="toStatus" label="新状态" /><ElTableColumn prop="reasonCode" label="原因" /><ElTableColumn prop="createdAt" label="时间" /></ElTable>
+            <ElDivider>状态记录</ElDivider><ElTable :data="detail.statusLogs"><ElTableColumn prop="fromStatus" label="原状态" /><ElTableColumn prop="toStatus" label="新状态" /><ElTableColumn prop="reasonCode" label="原因" /><ElTableColumn prop="createdAt" label="时间"><template #default="{ row }"><AdminTime :value="row.createdAt" /></template></ElTableColumn></ElTable>
           </ElTabPane>
           <ElTabPane v-if="content" label="受控内容" name="content"><ElAlert title="敏感内容已记录查看原因与审计，离开详情后不再保留在页面。" type="warning" show-icon :closable="false" class="mb-4" /><div v-if="content.text" class="whitespace-pre-wrap rounded border p-4">{{ content.text }}</div><ElDescriptions v-else :column="1" border><ElDescriptionsItem label="语音媒体 ID">{{ content.voice?.mediaId }}</ElDescriptionsItem><ElDescriptionsItem label="时长（毫秒）">{{ content.voice?.durationMs }}</ElDescriptionsItem></ElDescriptions></ElTabPane>
-          <ElTabPane v-if="matchesLoaded" label="匹配记录" name="matches"><ElTable :data="matches"><ElTableColumn prop="matchLogId" label="记录 ID" /><ElTableColumn prop="userId" label="用户 ID" /><ElTableColumn prop="result" label="结果" /><ElTableColumn prop="ruleVersion" label="规则版本" /><ElTableColumn prop="createdAt" label="时间" /></ElTable><div class="mt-3 text-right"><ElButton v-if="matchCursor" @click="nextMatches">加载更多</ElButton></div></ElTabPane>
+          <ElTabPane v-if="matchesLoaded" label="匹配记录" name="matches"><ElTable :data="matches"><ElTableColumn prop="matchLogId" label="记录 ID" /><ElTableColumn prop="userId" label="用户 ID" /><ElTableColumn prop="result" label="结果" /><ElTableColumn prop="ruleVersion" label="规则版本" /><ElTableColumn prop="createdAt" label="时间"><template #default="{ row }"><AdminTime :value="row.createdAt" /></template></ElTableColumn></ElTable><div class="mt-3 text-right"><ElButton v-if="matchCursor" @click="nextMatches">加载更多</ElButton></div></ElTabPane>
         </ElTabs>
       </template>
     </ElDrawer>
