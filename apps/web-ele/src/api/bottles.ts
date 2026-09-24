@@ -16,6 +16,8 @@ export const listBottles = (params: Record<string, unknown>) =>
 export const getBottle = (id: number) => requestClient.get<BottleDetail>(`/bottles/${id}`);
 export const getBottleContent = (id: number, reasonCode: string) =>
   requestClient.get<BottleContent>(`/bottles/${id}/content`, { params: { reasonCode } });
+export const getBottleVoicePreview = (id: number, reasonCode: string) =>
+  requestClient.download<Blob>(`/bottles/${id}/voice-preview?reasonCode=${encodeURIComponent(reasonCode)}`);
 export const listBottleMatches = (id: number, reasonCode: string, cursor = '') =>
   requestClient.get<CursorPage<Record<string, any>>>(`/bottles/${id}/matches`, { params: { reasonCode, cursor: cursor || undefined, limit: 20 } });
 export const removeBottle = (id: number, reasonCode: string) =>

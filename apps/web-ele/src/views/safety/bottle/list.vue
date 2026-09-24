@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 
 import { useAccess } from '@vben/access';
 
 import { ElMessage, ElMessageBox } from 'element-plus';
 
 import {
-  getBottle, getBottleContent, listBottleMatches, listBottles,
+  getBottle, getBottleContent, getBottleVoicePreview, listBottleMatches, listBottles,
   removeBottle, restoreBottle, retryBottleReview,
 } from '#/api/bottles';
 import type { BottleContent, BottleDetail, BottleRow } from '#/api/bottles';
@@ -33,6 +33,10 @@ const matchesLoaded = ref(false);
 const matchCursor = ref<string | null>(null);
 const matchReason = ref('');
 const detailTab = ref('metadata');
+const voicePreviewURL = ref('');
+const voicePreviewBusy = ref(false);
+const voicePlayer = ref<HTMLAudioElement | null>(null);
+let voiceExpiryTimer: null | number = null;
 
 const reasonPattern = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 async function askReason(title: string): Promise<string> {
@@ -79,16 +83,50 @@ function previous() {
 }
 
 async function openDetail(id: number) {
+  clearVoicePreview();
   detail.value = null; content.value = null; matches.value = []; matchesLoaded.value = false;
   detailTab.value = 'metadata'; detailOpen.value = true;
   detail.value = await getBottle(id);
 }
 
 async function revealContent() {
-  if (!detail.value) return;
+  const bottleId = detail.value?.bottle.bottleId;
+  if (!bottleId) return;
   const reason = await askReason('查看受控内容');
-  content.value = await getBottleContent(detail.value.bottle.bottleId, reason);
+  const result = await getBottleContent(bottleId, reason);
+  if (!detailOpen.value || detail.value?.bottle.bottleId !== bottleId) return;
+  clearVoicePreview();
+  content.value = result;
   detailTab.value = 'content';
+}
+
+function clearVoicePreview() {
+  if (voiceExpiryTimer !== null) window.clearTimeout(voiceExpiryTimer);
+  voiceExpiryTimer = null;
+  voicePlayer.value?.pause();
+  if (voicePreviewURL.value) URL.revokeObjectURL(voicePreviewURL.value);
+  voicePreviewURL.value = '';
+}
+
+async function previewVoice() {
+  const bottleId = detail.value?.bottle.bottleId;
+  if (!bottleId || content.value?.contentType !== 'voice' || !content.value.voice?.mediaId || voicePreviewBusy.value) return;
+  const reason = await askReason('播放漂流瓶语音，请填写审计原因');
+  voicePreviewBusy.value = true;
+  try {
+    const blob = await getBottleVoicePreview(bottleId, reason);
+    if (!detailOpen.value || detail.value?.bottle.bottleId !== bottleId) return;
+    if (!(blob instanceof Blob) || !blob.type.startsWith('audio/')) {
+      ElMessage.error('服务端未返回可播放的语音');
+      return;
+    }
+    clearVoicePreview();
+    voicePreviewURL.value = URL.createObjectURL(blob);
+    voiceExpiryTimer = window.setTimeout(() => {
+      clearVoicePreview();
+      ElMessage.info('语音预览已到期，请重新填写原因后查看');
+    }, 5 * 60 * 1000);
+  } finally { voicePreviewBusy.value = false; }
 }
 
 async function revealMatches() {
@@ -102,6 +140,7 @@ async function revealMatches() {
 }
 
 function clearSensitive() {
+  clearVoicePreview();
   content.value = null;
   matches.value = [];
   matchesLoaded.value = false;
@@ -128,6 +167,7 @@ async function changeBottle(kind: 'remove' | 'restore' | 'retry') {
 }
 
 onMounted(() => { void load(); });
+onBeforeUnmount(clearVoicePreview);
 </script>
 
 <template>
@@ -172,7 +212,19 @@ onMounted(() => { void load(); });
             <ElDescriptions :column="2" border><ElDescriptionsItem label="发布者">{{ detail.bottle.ownerUserId || '匿名' }}</ElDescriptionsItem><ElDescriptionsItem label="来源">{{ detail.bottle.sourceType }}</ElDescriptionsItem><ElDescriptionsItem label="状态">{{ detail.bottle.status }}</ElDescriptionsItem><ElDescriptionsItem label="审核">{{ detail.bottle.reviewStatus }}</ElDescriptionsItem><ElDescriptionsItem label="分类 ID">{{ detail.bottle.categoryId }}</ElDescriptionsItem><ElDescriptionsItem label="已获取/上限">{{ detail.bottle.pickedCount }} / {{ detail.bottle.maxPickCount }}</ElDescriptionsItem></ElDescriptions>
             <ElDivider>状态记录</ElDivider><ElTable :data="detail.statusLogs"><ElTableColumn prop="fromStatus" label="原状态" /><ElTableColumn prop="toStatus" label="新状态" /><ElTableColumn prop="reasonCode" label="原因" /><ElTableColumn prop="createdAt" label="时间"><template #default="{ row }"><AdminTime :value="row.createdAt" /></template></ElTableColumn></ElTable>
           </ElTabPane>
-          <ElTabPane v-if="content" label="受控内容" name="content"><ElAlert title="敏感内容已记录查看原因与审计，离开详情后不再保留在页面。" type="warning" show-icon :closable="false" class="mb-4" /><div v-if="content.text" class="whitespace-pre-wrap rounded border p-4">{{ content.text }}</div><ElDescriptions v-else :column="1" border><ElDescriptionsItem label="语音媒体 ID">{{ content.voice?.mediaId }}</ElDescriptionsItem><ElDescriptionsItem label="时长（毫秒）">{{ content.voice?.durationMs }}</ElDescriptionsItem></ElDescriptions></ElTabPane>
+          <ElTabPane v-if="content" label="受控内容" name="content">
+            <ElAlert title="敏感内容已记录查看原因与审计，离开详情后不再保留在页面。" type="warning" show-icon :closable="false" class="mb-4" />
+            <div v-if="content.contentType === 'text'" class="whitespace-pre-wrap rounded border p-4">{{ content.text || '—' }}</div>
+            <template v-else>
+              <ElDescriptions :column="1" border>
+                <ElDescriptionsItem label="语音媒体 ID">{{ content.voice?.mediaId || '—' }}</ElDescriptionsItem>
+                <ElDescriptionsItem label="时长（毫秒）">{{ content.voice?.durationMs || '—' }}</ElDescriptionsItem>
+                <ElDescriptionsItem label="转写">服务未接通，当前不可用</ElDescriptionsItem>
+              </ElDescriptions>
+              <ElButton v-if="content.voice?.mediaId" class="mt-4" type="primary" :loading="voicePreviewBusy" @click="previewVoice">填写原因并播放</ElButton>
+              <audio v-if="voicePreviewURL" ref="voicePlayer" class="mt-4 w-full" :src="voicePreviewURL" controls controlslist="nodownload noplaybackrate" preload="none" @contextmenu.prevent />
+            </template>
+          </ElTabPane>
           <ElTabPane v-if="matchesLoaded" label="匹配记录" name="matches"><ElTable :data="matches"><ElTableColumn prop="matchLogId" label="记录 ID" /><ElTableColumn prop="userId" label="用户 ID" /><ElTableColumn prop="result" label="结果" /><ElTableColumn prop="ruleVersion" label="规则版本" /><ElTableColumn prop="createdAt" label="时间"><template #default="{ row }"><AdminTime :value="row.createdAt" /></template></ElTableColumn></ElTable><div class="mt-3 text-right"><ElButton v-if="matchCursor" @click="nextMatches">加载更多</ElButton></div></ElTabPane>
         </ElTabs>
       </template>
