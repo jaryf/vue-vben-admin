@@ -1,7 +1,7 @@
 {
   "title": "合规与审计",
   "legalDocument": {"title": "法律文档", "write": "编辑法律文档", "publish": "发布法律文档", "review": "复核法律文档"},
-  "language": {"title": "语言管理", "update": "修改语言"},
+  "language": {"title": "语言管理", "update": "修改语言", "create": "登记语言"},
   "auditLog": {"title": "审计日志"},
   "dataExport": {"title": "异步数据导出", "request": "申请导出", "approve": "审批导出", "download": "下载导出"}
 }
