@@ -24,3 +24,5 @@ export const listOrders = (params: Record<string, unknown>) => requestClient.get
 export const getOrder = (id: number) => requestClient.get<OrderDetail>(`/orders/${id}`);
 export const listPayments = (params: Record<string, unknown>) => requestClient.get<CursorPage<Record<string, any>>>('/payments', { params });
 export const listSubscriptions = (params: Record<string, unknown>) => requestClient.get<CursorPage<Record<string, any>>>('/subscriptions', { params });
+export const listEntitlementLedger = (params: Record<string, unknown>) => requestClient.get<CursorPage<Record<string, any>>>('/entitlement-ledger', { params });
+export const listCoinLedger = (params: Record<string, unknown>) => requestClient.get<CursorPage<Record<string, any>>>('/coin-ledger', { params });

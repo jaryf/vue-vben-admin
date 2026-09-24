@@ -6,14 +6,14 @@ import { useAccess } from '@vben/access';
 import { ElMessage, ElMessageBox } from 'element-plus';
 
 import {
-  getOrder, listOrders, listPayments, listProducts, listSubscriptions,
+  getOrder, listCoinLedger, listEntitlementLedger, listOrders, listPayments, listProducts, listSubscriptions,
   updateProductStatus,
 } from '#/api/commerce';
 import type { OrderDetail, ProductRow } from '#/api/commerce';
 
 const { hasAccessByCodes } = useAccess();
 const canManageProducts = computed(() => hasAccessByCodes(['product.manage']));
-const active = ref<'orders' | 'payments' | 'products' | 'subscriptions'>('orders');
+const active = ref<'coins' | 'entitlements' | 'orders' | 'payments' | 'products' | 'subscriptions'>('orders');
 const filter = reactive({ id: '', userId: '', status: '', orderNo: '' });
 const rows = ref<Record<string, any>[]>([]);
 const nextCursor = ref<string | null>(null);
@@ -54,11 +54,31 @@ const columns = computed(() => ({
     ['internalCode', '商品', 160], ['paymentChannel', '渠道', 120],
     ['status', '状态', 110], ['currentPeriodEndsAt', '当前周期到期', 175],
   ],
+  entitlements: [
+    ['ledgerId', '流水 ID', 105], ['userId', '用户 ID', 105],
+    ['entitlementType', '权益类型', 145], ['operation', '操作', 110],
+    ['changeAmount', '变动', 90], ['balanceAfter', '变动后余额', 120],
+    ['sourceType', '来源类型', 120], ['sourceId', '来源 ID', 145],
+    ['effectiveAt', '生效时间', 175], ['expiresAt', '到期时间', 175],
+    ['createdAt', '记录时间', 175],
+  ],
+  coins: [
+    ['ledgerId', '流水 ID', 105], ['userId', '用户 ID', 105],
+    ['operation', '操作', 115], ['amount', '变动', 90],
+    ['balanceAfter', '变动后余额', 120], ['sourceType', '来源类型', 125],
+    ['sourceId', '来源 ID', 155], ['orderId', '订单 ID', 110],
+    ['createdAt', '记录时间', 175],
+  ],
 })[active.value]);
 
 async function load(cursor = '') {
   loading.value = true;
   try {
+    if ((active.value === 'entitlements' || active.value === 'coins') && !/^[1-9]\d*$/.test(filter.userId.trim())) {
+      rows.value = [];
+      nextCursor.value = null;
+      return;
+    }
     const params: Record<string, unknown> = { limit: 20, cursor: cursor || undefined };
     if (active.value === 'orders') {
       Object.assign(params, { orderId: filter.id.trim() || undefined, userId: filter.userId.trim() || undefined, orderNo: filter.orderNo.trim() || undefined, status: filter.status || undefined });
@@ -66,20 +86,34 @@ async function load(cursor = '') {
       Object.assign(params, { productId: filter.id.trim() || undefined, status: filter.status || undefined });
     } else if (active.value === 'payments') {
       Object.assign(params, { transactionId: filter.id.trim() || undefined, userId: filter.userId.trim() || undefined, status: filter.status || undefined });
-    } else {
+    } else if (active.value === 'subscriptions') {
       Object.assign(params, { subscriptionId: filter.id.trim() || undefined, userId: filter.userId.trim() || undefined, status: filter.status || undefined });
+    } else {
+      Object.assign(params, { userId: filter.userId.trim() });
     }
     const result = active.value === 'orders' ? await listOrders(params)
       : active.value === 'products' ? await listProducts(params)
       : active.value === 'payments' ? await listPayments(params)
-      : await listSubscriptions(params);
+      : active.value === 'subscriptions' ? await listSubscriptions(params)
+      : active.value === 'entitlements' ? await listEntitlementLedger(params)
+      : await listCoinLedger(params);
     rows.value = result.items || [];
     nextCursor.value = result.nextCursor;
   } finally { loading.value = false; }
 }
 
-function search() { cursorStack.value = []; void load(); }
-function switchTab() { Object.assign(filter, { id: '', userId: '', status: '', orderNo: '' }); search(); }
+function search() {
+  if ((active.value === 'entitlements' || active.value === 'coins') && !/^[1-9]\d*$/.test(filter.userId.trim())) {
+    ElMessage.warning('请输入有效的 App 用户 ID 后查询账本');
+    return;
+  }
+  cursorStack.value = []; void load();
+}
+function switchTab() {
+  Object.assign(filter, { id: '', userId: '', status: '', orderNo: '' });
+  cursorStack.value = [];
+  void load();
+}
 function next() { if (!nextCursor.value) return; cursorStack.value.push(nextCursor.value); void load(nextCursor.value); }
 function previous() { cursorStack.value.pop(); void load(cursorStack.value.at(-1) || ''); }
 
@@ -109,12 +143,13 @@ onMounted(() => { void load(); });
     <ElCard shadow="never">
       <template #header>商品与交易</template>
       <ElAlert title="商品售价以 Google Play 或 App Store 当前商店数据为准；金币包购买和消费入口暂未开放，后台不提供主动退款。" type="info" show-icon :closable="false" class="mb-4" />
-      <ElTabs v-model="active" @tab-change="switchTab"><ElTabPane label="订单" name="orders" /><ElTabPane label="商品" name="products" /><ElTabPane label="支付交易" name="payments" /><ElTabPane label="订阅" name="subscriptions" /></ElTabs>
+      <ElTabs v-model="active" @tab-change="switchTab"><ElTabPane label="订单" name="orders" /><ElTabPane label="商品" name="products" /><ElTabPane label="支付交易" name="payments" /><ElTabPane label="订阅" name="subscriptions" /><ElTabPane label="权益账本" name="entitlements" /><ElTabPane label="金币账本" name="coins" /></ElTabs>
+      <ElAlert v-if="active === 'entitlements' || active === 'coins'" title="请输入 App 用户 ID 查看完整账本；此处仅供核对，不提供直接修改流水。" type="info" show-icon :closable="false" class="mb-4" />
       <div class="mb-4 flex flex-wrap gap-3">
-        <ElInput v-model="filter.id" :placeholder="active === 'orders' ? '订单 ID' : active === 'products' ? '商品 ID' : active === 'payments' ? '交易 ID' : '订阅 ID'" clearable class="!w-36" />
+        <ElInput v-if="active !== 'entitlements' && active !== 'coins'" v-model="filter.id" :placeholder="active === 'orders' ? '订单 ID' : active === 'products' ? '商品 ID' : active === 'payments' ? '交易 ID' : '订阅 ID'" clearable class="!w-36" />
         <ElInput v-if="active !== 'products'" v-model="filter.userId" placeholder="用户 ID" clearable class="!w-36" />
         <ElInput v-if="active === 'orders'" v-model="filter.orderNo" placeholder="订单号" clearable class="!w-48" />
-        <ElInput v-model="filter.status" placeholder="状态代码" clearable class="!w-40" />
+        <ElInput v-if="active !== 'entitlements' && active !== 'coins'" v-model="filter.status" placeholder="状态代码" clearable class="!w-40" />
         <ElButton @click="search">查询</ElButton>
       </div>
       <ElTable v-loading="loading" :data="rows">
