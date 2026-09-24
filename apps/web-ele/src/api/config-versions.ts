@@ -4,10 +4,11 @@ import type { CursorPage } from './app-users';
 
 export interface ConfigVersion {
   versionId: number;
-  scope: 'feature_flags' | 'moderation_rules';
+  scope: 'ai_distribution' | 'feature_flags' | 'moderation_rules';
   version: string;
   schemaVersion: number;
-  payload: { flags: Record<string, boolean> } | { blockedTerms: string[] };
+  payload: { flags: Record<string, boolean> } | { blockedTerms: string[] } |
+    { maxPercent: number; rolloutPercent: number; languageOverrides?: Record<string, number> };
   status: 'draft' | 'reviewing' | 'approved' | 'published' | 'retired';
   requestedBy: number;
   reviewedBy: null | number;
