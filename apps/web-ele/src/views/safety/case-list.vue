@@ -27,11 +27,15 @@ const detail = ref<AppealDetail | ReportDetail | null>(null);
 const assignOpen = ref(false);
 const resolving = ref<AppealCase | ReportCase | null>(null);
 const resolveOpen = ref(false);
-const filter = reactive({ status: '', targetType: '', userId: '', assignedAdminId: '' });
+const filter = reactive({ status: '', priority: '', targetType: '', userId: '', assignedAdminId: '', createdRange: [] as Date[] });
+const appliedFilter = ref<Record<string, unknown>>({});
 const assignment = reactive({ reportId: 0, assignedAdminId: 0, priority: 'normal' });
 const resolution = reactive({ decision: '', resolutionCode: '' });
 const reportStatuses = ['submitted', 'triaging', 'reviewing', 'resolved_valid', 'resolved_invalid', 'closed_duplicate', 'appealed', 'appeal_resolved'];
 const appealStatuses = ['submitted', 'reviewing', 'resolved_approved', 'resolved_rejected', 'closed_duplicate'];
+const reportTargets = [['user', '用户'], ['bottle', '漂流瓶'], ['message', '消息'], ['conversation', '会话'], ['virtual_identity', '虚拟身份']];
+const appealTargets = [['bottle_review', '漂流瓶审核']];
+const priorities = [['low', '低'], ['normal', '普通'], ['high', '高'], ['urgent', '紧急']];
 const statusLabels: Record<string, string> = {
   submitted: '已提交', triaging: '分诊中', reviewing: '处理中',
   resolved_valid: '举报属实', resolved_invalid: '举报不成立', closed_duplicate: '重复案件',
@@ -44,18 +48,28 @@ const stableCode = (value: string) => /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(v
 async function load(cursor = '') {
   loading.value = true;
   try {
-    const params = {
-      status: filter.status || undefined, targetType: filter.targetType || undefined,
-      [isReport.value ? 'reporterUserId' : 'appellantUserId']: filter.userId || undefined,
-      assignedAdminId: filter.assignedAdminId || undefined,
-      cursor: cursor || undefined, limit: 20,
-    };
+    const params = { ...appliedFilter.value, cursor: cursor || undefined, limit: 20 };
     const result = isReport.value ? await listReports(params) : await listAppeals(params);
     rows.value = result.items || [];
     nextCursor.value = result.nextCursor;
   } finally { loading.value = false; }
 }
-function search() { cursorStack.value = []; void load(); }
+function search() {
+  if (filter.createdRange?.length === 2 && filter.createdRange[0]!.getTime() >= filter.createdRange[1]!.getTime()) {
+    ElMessage.warning('结束时间必须晚于开始时间'); return;
+  }
+  appliedFilter.value = {
+    status: filter.status || undefined,
+    priority: isReport.value ? filter.priority || undefined : undefined,
+    targetType: filter.targetType || undefined,
+    [isReport.value ? 'reporterUserId' : 'appellantUserId']: filter.userId || undefined,
+    assignedAdminId: filter.assignedAdminId || undefined,
+    createdFrom: filter.createdRange?.[0]?.toISOString(),
+    createdUntil: filter.createdRange?.[1]?.toISOString(),
+  };
+  cursorStack.value = [];
+  void load();
+}
 function next() { if (!nextCursor.value) return; cursorStack.value.push(nextCursor.value); void load(nextCursor.value); }
 function previous() { cursorStack.value.pop(); void load(cursorStack.value.at(-1) || ''); }
 
@@ -97,7 +111,7 @@ async function saveResolve() {
   } finally { saving.value = false; }
 }
 function snapshotText(value: unknown) { return typeof value === 'string' ? value : JSON.stringify(value, null, 2); }
-onMounted(() => { void load(); });
+onMounted(search);
 </script>
 
 <template>
@@ -107,9 +121,11 @@ onMounted(() => { void load(); });
       <ElAlert title="证据查看需要单次填写原因，服务端会记录管理员、案件与审计原因。" type="info" show-icon :closable="false" class="mb-4" />
       <div class="mb-4 flex flex-wrap gap-3">
         <ElSelect v-model="filter.status" clearable placeholder="全部状态" class="!w-40"><ElOption v-for="status in isReport ? reportStatuses : appealStatuses" :key="status" :label="statusText(status)" :value="status" /></ElSelect>
-        <ElInput v-model="filter.targetType" placeholder="目标类型" clearable class="!w-36" />
+        <ElSelect v-model="filter.targetType" clearable placeholder="全部目标" class="!w-36"><ElOption v-for="[value, label] in isReport ? reportTargets : appealTargets" :key="value" :label="label" :value="value" /></ElSelect>
+        <ElSelect v-if="isReport" v-model="filter.priority" clearable placeholder="全部优先级" class="!w-36"><ElOption v-for="[value, label] in priorities" :key="value" :label="label" :value="value" /></ElSelect>
         <ElInput v-model="filter.userId" :placeholder="isReport ? '举报人 ID' : '申诉人 ID'" clearable class="!w-36" />
         <ElInput v-model="filter.assignedAdminId" placeholder="分派管理员 ID" clearable class="!w-40" />
+        <ElDatePicker v-model="filter.createdRange" type="datetimerange" range-separator="至" start-placeholder="提交开始" end-placeholder="提交结束" class="!w-[390px]" />
         <ElButton @click="search">查询</ElButton>
       </div>
       <ElTable v-loading="loading" :data="rows" :row-key="isReport ? 'reportId' : 'appealId'">
