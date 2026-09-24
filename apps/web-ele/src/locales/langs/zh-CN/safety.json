@@ -1,0 +1,10 @@
+{
+  "title": "内容与安全",
+  "report": {"title": "举报管理", "evidence": "查看举报证据", "assign": "分派举报", "resolve": "处理举报"},
+  "appeal": {"title": "申诉管理", "evidence": "查看申诉证据", "resolve": "处理申诉"},
+  "penalty": {"title": "处罚管理", "create": "创建处罚", "revoke": "撤销处罚"},
+  "bottle": {"title": "漂流瓶管理", "remove": "下架漂流瓶", "restore": "恢复漂流瓶", "searchSensitive": "搜索敏感内容", "matches": "查看匹配记录", "retryReview": "重试审核", "readSensitive": "查看敏感内容"},
+  "riskEvent": {"title": "风险事件"},
+  "conversation": {"title": "会话与消息", "messageRemove": "下架消息"},
+  "moderationReview": {"title": "人工审核"}
+}

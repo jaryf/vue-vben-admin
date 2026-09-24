@@ -1,0 +1,5 @@
+{
+  "title": "运营配置",
+  "taxonomy": {"title": "分类管理", "update": "修改分类"},
+  "contactRequest": {"title": "联系请求", "assign": "分派请求", "resolve": "解决请求", "reply": "回复请求"}
+}

@@ -1,0 +1,6 @@
+{
+  "title": "合规与审计",
+  "legalDocument": {"title": "法律文档", "write": "编辑法律文档", "publish": "发布法律文档", "review": "复核法律文档"},
+  "language": {"title": "语言管理", "update": "修改语言"},
+  "auditLog": {"title": "审计日志"}
+}

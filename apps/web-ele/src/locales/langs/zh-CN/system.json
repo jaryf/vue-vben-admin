@@ -1,0 +1,7 @@
+{
+  "title": "系统管理",
+  "user": {"title": "管理员", "create": "新增管理员", "edit": "编辑管理员", "delete": "删除管理员"},
+  "role": {"title": "角色管理"},
+  "menu": {"title": "菜单管理"},
+  "dept": {"title": "部门管理"}
+}
