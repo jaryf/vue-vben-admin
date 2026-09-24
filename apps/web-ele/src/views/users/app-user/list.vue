@@ -20,7 +20,9 @@ const canStatus = computed(() => hasAccessByCodes(['account_user.status.update']
 const canQuota = computed(() => hasAccessByCodes(['quota.adjust']));
 const canEntitlement = computed(() => hasAccessByCodes(['entitlement.adjust']));
 const canReviewDeletion = computed(() => hasAccessByCodes(['account_user.deletion.review']));
-const filters = reactive({ userId: '', nickname: '', status: '', countryCode: '' });
+const filters = reactive({ userId: '', nickname: '', status: '', countryCode: '', interfaceLanguage: '', vipStatus: '' });
+const registeredRange = ref<Date[] | null>(null);
+const activeRange = ref<Date[] | null>(null);
 const rows = ref<AppUserRow[]>([]);
 const nextCursor = ref<string | null>(null);
 const cursorStack = ref<string[]>([]);
@@ -62,6 +64,12 @@ async function load(cursor = '') {
       nickname: filters.nickname.trim() || undefined,
       status: filters.status || undefined,
       countryCode: filters.countryCode.trim().toUpperCase() || undefined,
+      interfaceLanguage: filters.interfaceLanguage.trim().toLowerCase() || undefined,
+      vipStatus: filters.vipStatus || undefined,
+      registeredFrom: registeredRange.value?.[0]?.toISOString(),
+      registeredUntil: registeredRange.value?.[1]?.toISOString(),
+      lastActiveFrom: activeRange.value?.[0]?.toISOString(),
+      lastActiveUntil: activeRange.value?.[1]?.toISOString(),
     });
     rows.value = result.items || [];
     nextCursor.value = result.nextCursor;
@@ -209,11 +217,16 @@ onMounted(() => { void load(); });
   <div class="p-5">
     <ElCard shadow="never">
       <template #header><div class="flex items-center justify-between"><span>App 用户</span><ElButton v-if="canReviewDeletion" @click="openDeletions">注销申请复核</ElButton></div></template>
+      <ElAlert title="VIP 有效按当前有效的订阅类商品权益判断；注册时间筛选不包含尚未注册的游客。" type="info" show-icon :closable="false" class="mb-4" />
       <div class="mb-4 flex flex-wrap gap-3">
         <ElInput v-model="filters.userId" placeholder="用户 ID" clearable class="!w-36" @keyup.enter="search" />
         <ElInput v-model="filters.nickname" placeholder="昵称" clearable class="!w-44" @keyup.enter="search" />
         <ElSelect v-model="filters.status" clearable placeholder="全部状态" class="!w-40"><ElOption v-for="(label, key) in statusLabels" :key="key" :label="label" :value="key" /></ElSelect>
         <ElInput v-model="filters.countryCode" placeholder="国家代码" maxlength="2" clearable class="!w-32" @keyup.enter="search" />
+        <ElInput v-model="filters.interfaceLanguage" placeholder="界面语言" maxlength="16" clearable class="!w-32" @keyup.enter="search" />
+        <ElSelect v-model="filters.vipStatus" clearable placeholder="全部 VIP 状态" class="!w-40"><ElOption label="VIP 有效" value="active" /><ElOption label="非 VIP" value="inactive" /></ElSelect>
+        <ElDatePicker v-model="registeredRange" type="datetimerange" start-placeholder="注册开始" end-placeholder="注册结束" class="!w-[350px]" />
+        <ElDatePicker v-model="activeRange" type="datetimerange" start-placeholder="活跃开始" end-placeholder="活跃结束" class="!w-[350px]" />
         <ElButton @click="search">查询</ElButton>
       </div>
       <ElTable v-loading="loading" :data="rows" row-key="userId" class="w-full">
@@ -222,8 +235,10 @@ onMounted(() => { void load(); });
         <ElTableColumn label="状态" width="110"><template #default="{ row }">{{ statusLabel(row.status) }}</template></ElTableColumn>
         <ElTableColumn prop="countryCode" label="国家" width="85" />
         <ElTableColumn prop="interfaceLanguage" label="语言" width="90" />
+        <ElTableColumn label="VIP" width="85"><template #default="{ row }">{{ row.vipActive ? '有效' : '无' }}</template></ElTableColumn>
         <ElTableColumn prop="activeSessionCount" label="活跃会话" width="100" />
         <ElTableColumn prop="lastActiveAt" label="最近活跃" min-width="170" />
+        <ElTableColumn prop="registeredAt" label="注册时间" min-width="170" />
         <ElTableColumn prop="createdAt" label="创建时间" min-width="170" />
         <ElTableColumn label="操作" width="85" fixed="right"><template #default="{ row }"><ElButton link type="primary" @click="openDetail(row.userId)">详情</ElButton></template></ElTableColumn>
       </ElTable>
