@@ -13,6 +13,8 @@ import {
   revokeAppUserSessions, updateAppUserStatus,
 } from '#/api/app-users';
 import type { AppUserDetail, AppUserRow } from '#/api/app-users';
+import { getOrder, listAppUserOrders, listCoinLedger, listEntitlementLedger } from '#/api/commerce';
+import type { OrderDetail } from '#/api/commerce';
 
 const { hasAccessByCodes } = useAccess();
 const canRevoke = computed(() => hasAccessByCodes(['account_user.session.revoke']));
@@ -20,6 +22,7 @@ const canStatus = computed(() => hasAccessByCodes(['account_user.status.update']
 const canQuota = computed(() => hasAccessByCodes(['quota.adjust']));
 const canEntitlement = computed(() => hasAccessByCodes(['entitlement.adjust']));
 const canReviewDeletion = computed(() => hasAccessByCodes(['account_user.deletion.review']));
+const canReadOrders = computed(() => hasAccessByCodes(['order.read']));
 const filters = reactive({ userId: '', nickname: '', status: '', countryCode: '', interfaceLanguage: '', vipStatus: '' });
 const registeredRange = ref<Date[] | null>(null);
 const activeRange = ref<Date[] | null>(null);
@@ -35,6 +38,13 @@ const devices = ref<Record<string, any>[]>([]);
 const bindings = ref<Record<string, any>[]>([]);
 const conflicts = ref<Record<string, any>[]>([]);
 const detailTab = ref('profile');
+const commerceKind = ref<'coins' | 'entitlements' | 'orders'>('orders');
+const commerceRows = ref<Record<string, any>[]>([]);
+const commerceCursor = ref<string | null>(null);
+const commerceLoading = ref(false);
+let commerceRevision = 0;
+const orderDetail = ref<OrderDetail | null>(null);
+const orderDetailOpen = ref(false);
 const actionOpen = ref(false);
 const action = ref<'entitlement' | 'quota' | 'status'>('status');
 const saving = ref(false);
@@ -92,6 +102,12 @@ async function openDetail(id: number) {
   detailTab.value = 'profile';
   detailOpen.value = true;
   detail.value = null;
+  orderDetailOpen.value = false;
+  orderDetail.value = null;
+  commerceRevision += 1;
+  commerceKind.value = 'orders';
+  commerceRows.value = [];
+  commerceCursor.value = null;
   const [user, sessionList, deviceList, bindingList, conflictList] = await Promise.all([
     getAppUser(id), listAppUserSessions(id), listAppUserDevices(id),
     listAppUserBindings(id), listAppUserIdentityConflicts(id),
@@ -101,6 +117,32 @@ async function openDetail(id: number) {
   devices.value = deviceList || [];
   bindings.value = bindingList || [];
   conflicts.value = conflictList || [];
+}
+
+async function loadCommerce(cursor = '') {
+  const userId = detailUserId.value;
+  const kind = commerceKind.value;
+  if (!userId || !canReadOrders.value) return;
+  const revision = ++commerceRevision;
+  commerceLoading.value = true;
+  try {
+    const params = { userId, cursor: cursor || undefined, limit: 20 };
+    const result = kind === 'orders' ? await listAppUserOrders(userId, params)
+      : kind === 'entitlements' ? await listEntitlementLedger(params)
+      : await listCoinLedger(params);
+    if (detailUserId.value !== userId || commerceKind.value !== kind || revision !== commerceRevision) return;
+    commerceRows.value = cursor ? [...commerceRows.value, ...(result.items || [])] : result.items || [];
+    commerceCursor.value = result.nextCursor;
+  } finally { if (revision === commerceRevision) commerceLoading.value = false; }
+}
+function switchCommerce() { commerceRows.value = []; commerceCursor.value = null; void loadCommerce(); }
+function detailTabChanged(tab: string | number) { if (tab === 'commerce') switchCommerce(); }
+async function openOrderDetail(id: number) {
+  const userId = detailUserId.value;
+  const result = await getOrder(id);
+  if (detailUserId.value !== userId) return;
+  orderDetail.value = result;
+  orderDetailOpen.value = true;
 }
 
 async function refreshDetail() {
@@ -254,7 +296,7 @@ onMounted(() => { void load(); });
           <ElButton v-if="canEntitlement" @click="openAction('entitlement')">正向权益补发</ElButton>
           <ElButton v-if="canRevoke" type="warning" @click="revokeAll">强制退出全部会话</ElButton>
         </div>
-        <ElTabs v-model="detailTab">
+        <ElTabs v-model="detailTab" @tab-change="detailTabChanged">
           <ElTabPane label="资料与状态" name="profile">
             <ElDescriptions :column="2" border>
               <ElDescriptionsItem label="用户 ID">{{ detail.user.userId }}</ElDescriptionsItem>
@@ -285,10 +327,21 @@ onMounted(() => { void load(); });
             <ElTable :data="devices" row-key="deviceId"><ElTableColumn prop="deviceId" label="设备 ID" /><ElTableColumn prop="platform" label="平台" /><ElTableColumn prop="deviceModel" label="型号" /><ElTableColumn prop="integrityStatus" label="完整性" /><ElTableColumn prop="lastActiveAt" label="最近活跃" /></ElTable>
           </ElTabPane>
           <ElTabPane label="身份绑定" name="bindings"><ElTable :data="bindings"><ElTableColumn prop="provider" label="方式" /><ElTableColumn prop="displayValue" label="展示值" /><ElTableColumn prop="status" label="状态" /><ElTableColumn prop="boundAt" label="绑定时间" /></ElTable><ElDivider>绑定冲突</ElDivider><ElTable :data="conflicts"><ElTableColumn prop="conflictId" label="记录 ID" /><ElTableColumn prop="provider" label="方式" /><ElTableColumn prop="createdAt" label="时间" /></ElTable></ElTabPane>
+          <ElTabPane v-if="canReadOrders" label="订单与账本" name="commerce">
+            <ElTabs v-model="commerceKind" @tab-change="switchCommerce"><ElTabPane label="订单" name="orders" /><ElTabPane label="权益账本" name="entitlements" /><ElTabPane label="金币账本" name="coins" /></ElTabs>
+            <ElTable v-if="commerceKind === 'orders'" v-loading="commerceLoading" :data="commerceRows" row-key="orderId"><ElTableColumn prop="orderId" label="订单 ID" width="100" /><ElTableColumn prop="orderNo" label="订单号" min-width="170" /><ElTableColumn prop="internalCode" label="商品" min-width="130" /><ElTableColumn prop="status" label="状态" width="120" /><ElTableColumn prop="amountMinor" label="最小货币单位金额" width="155" /><ElTableColumn prop="currency" label="币种" width="85" /><ElTableColumn prop="createdAt" label="创建时间" min-width="165" /><ElTableColumn label="操作" width="80"><template #default="{ row }"><ElButton link type="primary" @click="openOrderDetail(row.orderId)">详情</ElButton></template></ElTableColumn></ElTable>
+            <ElTable v-else-if="commerceKind === 'entitlements'" v-loading="commerceLoading" :data="commerceRows" row-key="ledgerId"><ElTableColumn prop="ledgerId" label="流水 ID" width="100" /><ElTableColumn prop="entitlementType" label="权益类型" min-width="150" /><ElTableColumn prop="operation" label="操作" width="105" /><ElTableColumn prop="changeAmount" label="变动" width="95" /><ElTableColumn prop="balanceAfter" label="变动后" width="95" /><ElTableColumn prop="sourceType" label="来源" width="110" /><ElTableColumn prop="createdAt" label="创建时间" min-width="165" /></ElTable>
+            <ElTable v-else v-loading="commerceLoading" :data="commerceRows" row-key="ledgerId"><ElTableColumn prop="ledgerId" label="流水 ID" width="100" /><ElTableColumn prop="operation" label="操作" width="110" /><ElTableColumn prop="amount" label="变动" width="95" /><ElTableColumn prop="balanceAfter" label="变动后" width="95" /><ElTableColumn prop="sourceType" label="来源" width="120" /><ElTableColumn prop="orderId" label="关联订单" width="110" /><ElTableColumn prop="createdAt" label="创建时间" min-width="165" /></ElTable>
+            <div v-if="commerceCursor" class="mt-3 text-right"><ElButton :loading="commerceLoading" @click="loadCommerce(commerceCursor || '')">加载更多</ElButton></div>
+          </ElTabPane>
           <ElTabPane label="状态记录" name="history"><ElTable :data="detail.recentStatusLogs"><ElTableColumn prop="fromStatus" label="原状态" /><ElTableColumn prop="toStatus" label="新状态" /><ElTableColumn prop="reasonCode" label="原因代码" /><ElTableColumn prop="createdAt" label="时间" /></ElTable></ElTabPane>
         </ElTabs>
       </template>
     </ElDrawer>
+
+    <ElDialog v-model="orderDetailOpen" :title="`订单 #${orderDetail?.order.orderId || ''}`" width="70%" @closed="orderDetail = null">
+      <template v-if="orderDetail"><ElDescriptions :column="2" border><ElDescriptionsItem label="订单号">{{ orderDetail.order.orderNo }}</ElDescriptionsItem><ElDescriptionsItem label="状态">{{ orderDetail.order.status }}</ElDescriptionsItem><ElDescriptionsItem label="商品">{{ orderDetail.order.internalCode }}</ElDescriptionsItem><ElDescriptionsItem label="金额">{{ orderDetail.order.amountMinor }} {{ orderDetail.order.currency }}（最小货币单位）</ElDescriptionsItem></ElDescriptions><ElDivider>支付交易</ElDivider><ElTable :data="orderDetail.transactions"><ElTableColumn prop="transactionId" label="交易 ID" /><ElTableColumn prop="transactionType" label="类型" /><ElTableColumn prop="status" label="状态" /><ElTableColumn prop="verifiedAt" label="验证时间" /></ElTable><ElDivider>权益流水</ElDivider><ElTable :data="orderDetail.entitlementLedger"><ElTableColumn prop="ledgerId" label="流水 ID" /><ElTableColumn prop="entitlementType" label="权益" /><ElTableColumn prop="changeAmount" label="变动" /><ElTableColumn prop="createdAt" label="时间" /></ElTable><ElDivider>金币流水</ElDivider><ElTable :data="orderDetail.coinLedger"><ElTableColumn prop="ledgerId" label="流水 ID" /><ElTableColumn prop="amount" label="变动" /><ElTableColumn prop="createdAt" label="时间" /></ElTable></template>
+    </ElDialog>
 
     <ElDialog v-model="actionOpen" :title="action === 'status' ? '调整用户状态' : action === 'quota' ? '调整一次性额度' : '正向权益补发'" width="520px" destroy-on-close>
       <ElForm label-position="top" @submit.prevent="submitAction">

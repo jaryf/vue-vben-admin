@@ -21,6 +21,8 @@ export interface OrderDetail {
 export const listProducts = (params: Record<string, unknown>) => requestClient.get<CursorPage<ProductRow>>('/products', { params });
 export const updateProductStatus = (id: number, status: string) => requestClient.request<ProductRow>(`/products/${id}/status`, { method: 'PATCH', data: { status } });
 export const listOrders = (params: Record<string, unknown>) => requestClient.get<CursorPage<OrderRow>>('/orders', { params });
+export const listAppUserOrders = (userId: number, params: Record<string, unknown>) =>
+  requestClient.get<CursorPage<OrderRow>>(`/users/${userId}/orders`, { params });
 export const getOrder = (id: number) => requestClient.get<OrderDetail>(`/orders/${id}`);
 export const listPayments = (params: Record<string, unknown>) => requestClient.get<CursorPage<Record<string, any>>>('/payments', { params });
 export const listSubscriptions = (params: Record<string, unknown>) => requestClient.get<CursorPage<Record<string, any>>>('/subscriptions', { params });
