@@ -8,7 +8,7 @@ export interface ConfigVersion {
   version: string;
   schemaVersion: number;
   payload: { flags: Record<string, boolean> } | { blockedTerms?: string[]; regexRules?: string[]; blockedDomains?: string[]; shortlinkDomains?: string[]; riskThresholds?: { medium: number; high: number; critical: number; manualReviewBelow: number } } |
-    { maxPercent: number; rolloutPercent: number; languageOverrides?: Record<string, number> };
+    { maxPercent: number; rolloutPercent: number; languageOverrides?: Record<string, number>; targetInterestTagIds?: number[]; dailyWindowStart?: string; dailyWindowEnd?: string; maxExposurePerBottle?: number };
   status: 'draft' | 'reviewing' | 'approved' | 'published' | 'retired';
   requestedBy: number;
   reviewedBy: null | number;
