@@ -15,6 +15,10 @@ import {
 import type { AppUserDetail, AppUserRow } from '#/api/app-users';
 import { getOrder, listAppUserOrders, listCoinLedger, listEntitlementLedger } from '#/api/commerce';
 import type { OrderDetail } from '#/api/commerce';
+import { listBottles } from '#/api/bottles';
+import { listConversations } from '#/api/conversations';
+import { listRiskEvents } from '#/api/risk-events';
+import { listReports } from '#/api/safety-cases';
 
 const { hasAccessByCodes } = useAccess();
 const canRevoke = computed(() => hasAccessByCodes(['account_user.session.revoke']));
@@ -23,6 +27,11 @@ const canQuota = computed(() => hasAccessByCodes(['quota.adjust']));
 const canEntitlement = computed(() => hasAccessByCodes(['entitlement.adjust']));
 const canReviewDeletion = computed(() => hasAccessByCodes(['account_user.deletion.review']));
 const canReadOrders = computed(() => hasAccessByCodes(['order.read']));
+const canReadBottles = computed(() => hasAccessByCodes(['bottle.read']));
+const canReadConversations = computed(() => hasAccessByCodes(['message.read_context']));
+const canReadReports = computed(() => hasAccessByCodes(['report.read']));
+const canReadRisk = computed(() => hasAccessByCodes(['risk_event.read']));
+const canReadActivity = computed(() => canReadBottles.value || canReadConversations.value || canReadReports.value || canReadRisk.value);
 const filters = reactive({ userId: '', nickname: '', status: '', countryCode: '', interfaceLanguage: '', vipStatus: '' });
 const registeredRange = ref<Date[] | null>(null);
 const activeRange = ref<Date[] | null>(null);
@@ -45,6 +54,12 @@ const commerceLoading = ref(false);
 let commerceRevision = 0;
 const orderDetail = ref<OrderDetail | null>(null);
 const orderDetailOpen = ref(false);
+type ActivityKind = 'bottles' | 'conversations' | 'reports' | 'risks';
+const activityKind = ref<ActivityKind>('bottles');
+const activityRows = ref<Record<string, any>[]>([]);
+const activityCursor = ref<string | null>(null);
+const activityLoading = ref(false);
+let activityRevision = 0;
 const actionOpen = ref(false);
 const action = ref<'entitlement' | 'quota' | 'status'>('status');
 const saving = ref(false);
@@ -105,6 +120,10 @@ async function openDetail(id: number) {
   orderDetailOpen.value = false;
   orderDetail.value = null;
   commerceRevision += 1;
+  activityRevision += 1;
+  activityKind.value = canReadBottles.value ? 'bottles' : canReadConversations.value ? 'conversations' : canReadReports.value ? 'reports' : 'risks';
+  activityRows.value = [];
+  activityCursor.value = null;
   commerceKind.value = 'orders';
   commerceRows.value = [];
   commerceCursor.value = null;
@@ -136,7 +155,10 @@ async function loadCommerce(cursor = '') {
   } finally { if (revision === commerceRevision) commerceLoading.value = false; }
 }
 function switchCommerce() { commerceRows.value = []; commerceCursor.value = null; void loadCommerce(); }
-function detailTabChanged(tab: string | number) { if (tab === 'commerce') switchCommerce(); }
+function detailTabChanged(tab: string | number) {
+  if (tab === 'commerce') switchCommerce();
+  if (tab === 'activity') switchActivity();
+}
 async function openOrderDetail(id: number) {
   const userId = detailUserId.value;
   const result = await getOrder(id);
@@ -144,6 +166,26 @@ async function openOrderDetail(id: number) {
   orderDetail.value = result;
   orderDetailOpen.value = true;
 }
+async function loadActivity(cursor = '') {
+  const userId = detailUserId.value;
+  const kind = activityKind.value;
+  const permitted = kind === 'bottles' ? canReadBottles.value : kind === 'conversations' ? canReadConversations.value
+    : kind === 'reports' ? canReadReports.value : canReadRisk.value;
+  if (!userId || !permitted) return;
+  const revision = ++activityRevision;
+  activityLoading.value = true;
+  try {
+    const params = { cursor: cursor || undefined, limit: 20 };
+    const result = kind === 'bottles' ? await listBottles({ ...params, ownerUserId: userId })
+      : kind === 'conversations' ? await listConversations({ ...params, memberUserId: userId })
+      : kind === 'reports' ? await listReports({ ...params, reporterUserId: userId })
+      : await listRiskEvents({ ...params, userId });
+    if (detailUserId.value !== userId || activityKind.value !== kind || revision !== activityRevision) return;
+    activityRows.value = cursor ? [...activityRows.value, ...(result.items || [])] : result.items || [];
+    activityCursor.value = result.nextCursor;
+  } finally { if (revision === activityRevision) activityLoading.value = false; }
+}
+function switchActivity() { activityRows.value = []; activityCursor.value = null; void loadActivity(); }
 
 async function refreshDetail() {
   if (!detailUserId.value) return;
@@ -333,6 +375,15 @@ onMounted(() => { void load(); });
             <ElTable v-else-if="commerceKind === 'entitlements'" v-loading="commerceLoading" :data="commerceRows" row-key="ledgerId"><ElTableColumn prop="ledgerId" label="流水 ID" width="100" /><ElTableColumn prop="entitlementType" label="权益类型" min-width="150" /><ElTableColumn prop="operation" label="操作" width="105" /><ElTableColumn prop="changeAmount" label="变动" width="95" /><ElTableColumn prop="balanceAfter" label="变动后" width="95" /><ElTableColumn prop="sourceType" label="来源" width="110" /><ElTableColumn prop="createdAt" label="创建时间" min-width="165" /></ElTable>
             <ElTable v-else v-loading="commerceLoading" :data="commerceRows" row-key="ledgerId"><ElTableColumn prop="ledgerId" label="流水 ID" width="100" /><ElTableColumn prop="operation" label="操作" width="110" /><ElTableColumn prop="amount" label="变动" width="95" /><ElTableColumn prop="balanceAfter" label="变动后" width="95" /><ElTableColumn prop="sourceType" label="来源" width="120" /><ElTableColumn prop="orderId" label="关联订单" width="110" /><ElTableColumn prop="createdAt" label="创建时间" min-width="165" /></ElTable>
             <div v-if="commerceCursor" class="mt-3 text-right"><ElButton :loading="commerceLoading" @click="loadCommerce(commerceCursor || '')">加载更多</ElButton></div>
+          </ElTabPane>
+          <ElTabPane v-if="canReadActivity" label="内容与安全记录" name="activity">
+            <ElAlert title="这里只展示业务元数据；完整漂流瓶内容、举报证据和消息上下文需在对应治理页面填写原因后受控查看。" type="info" show-icon :closable="false" class="mb-4" />
+            <ElTabs v-model="activityKind" @tab-change="switchActivity"><ElTabPane v-if="canReadBottles" label="发布的漂流瓶" name="bottles" /><ElTabPane v-if="canReadConversations" label="参与的会话" name="conversations" /><ElTabPane v-if="canReadReports" label="发起的举报" name="reports" /><ElTabPane v-if="canReadRisk" label="风险事件" name="risks" /></ElTabs>
+            <ElTable v-if="activityKind === 'bottles'" v-loading="activityLoading" :data="activityRows" row-key="bottleId"><ElTableColumn prop="bottleId" label="漂流瓶 ID" width="120" /><ElTableColumn prop="contentType" label="类型" width="95" /><ElTableColumn prop="status" label="状态" width="120" /><ElTableColumn prop="reviewStatus" label="审核状态" width="120" /><ElTableColumn prop="reportCount" label="举报数" width="90" /><ElTableColumn prop="createdAt" label="创建时间" min-width="175" /></ElTable>
+            <ElTable v-else-if="activityKind === 'conversations'" v-loading="activityLoading" :data="activityRows" row-key="conversationId"><ElTableColumn prop="conversationId" label="会话 ID" width="115" /><ElTableColumn prop="type" label="类型" width="110" /><ElTableColumn prop="status" label="状态" width="120" /><ElTableColumn prop="memberCount" label="成员数" width="90" /><ElTableColumn prop="messageCount" label="消息数" width="90" /><ElTableColumn prop="lastMessageAt" label="最近消息" min-width="175" /></ElTable>
+            <ElTable v-else-if="activityKind === 'reports'" v-loading="activityLoading" :data="activityRows" row-key="reportId"><ElTableColumn prop="reportId" label="举报 ID" width="105" /><ElTableColumn prop="targetType" label="目标类型" width="110" /><ElTableColumn prop="targetId" label="目标 ID" min-width="125" /><ElTableColumn prop="reasonCode" label="原因" min-width="125" /><ElTableColumn prop="priority" label="优先级" width="100" /><ElTableColumn prop="status" label="状态" width="110" /><ElTableColumn prop="createdAt" label="提交时间" min-width="175" /></ElTable>
+            <ElTable v-else v-loading="activityLoading" :data="activityRows" row-key="eventId"><ElTableColumn prop="eventId" label="事件 ID" width="105" /><ElTableColumn prop="eventType" label="事件类型" min-width="155" /><ElTableColumn prop="severity" label="严重程度" width="105" /><ElTableColumn prop="sourceType" label="来源" width="115" /><ElTableColumn prop="reasonCode" label="原因" min-width="125" /><ElTableColumn prop="occurredAt" label="发生时间" min-width="175" /></ElTable>
+            <div v-if="activityCursor" class="mt-3 text-right"><ElButton :loading="activityLoading" @click="loadActivity(activityCursor || '')">加载更多</ElButton></div>
           </ElTabPane>
           <ElTabPane label="状态记录" name="history"><ElTable :data="detail.recentStatusLogs"><ElTableColumn prop="fromStatus" label="原状态" /><ElTableColumn prop="toStatus" label="新状态" /><ElTableColumn prop="reasonCode" label="原因代码" /><ElTableColumn prop="createdAt" label="时间" /></ElTable></ElTabPane>
         </ElTabs>
