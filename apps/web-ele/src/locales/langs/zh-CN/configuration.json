@@ -2,5 +2,6 @@
   "title": "运营配置",
   "taxonomy": {"title": "分类管理", "update": "修改分类"},
   "contactRequest": {"title": "联系请求", "assign": "分派请求", "resolve": "解决请求", "reply": "回复请求"},
-  "websiteContent": {"title": "官网内容与帮助", "write": "编辑内容", "review": "复核内容", "publish": "发布内容"}
+  "websiteContent": {"title": "官网内容与帮助", "write": "编辑内容", "review": "复核内容", "publish": "发布内容"},
+  "version": {"title": "功能开关版本", "write": "编辑配置", "approve": "审批配置", "publish": "发布配置"}
 }
