@@ -9,7 +9,10 @@ export const overridesPreferences = defineOverridesPreferences({
   // overrides
   app: {
     accessMode: 'backend',
+    defaultAvatar: '/driftly-mark.svg',
     defaultHomePath: '/workspace',
+    enableCheckUpdates: false,
+    enablePreferences: false,
     enableRefreshToken: true,
     locale: 'zh-CN',
     name: import.meta.env.VITE_APP_TITLE,
@@ -19,5 +22,9 @@ export const overridesPreferences = defineOverridesPreferences({
   logo: {
     source: '/driftly-mark.svg',
     sourceDark: '/driftly-mark.svg',
+  },
+  widget: {
+    languageToggle: false,
+    notification: false,
   },
 });
