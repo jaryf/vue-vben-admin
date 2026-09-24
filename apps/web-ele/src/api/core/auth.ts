@@ -1,3 +1,5 @@
+import { useAccessStore } from '@vben/stores';
+
 import { baseRequestClient, requestClient } from '#/api/request';
 
 export namespace AuthApi {
@@ -47,6 +49,18 @@ export async function refreshTokenApi() {
  */
 export async function logoutApi() {
   return requestClient.post('/system/auth/logout', undefined, {
+    withCredentials: true,
+  });
+}
+
+// Idle lock must not refresh an expired session or recurse into the normal logout interceptor.
+export async function logoutIdleSessionApi() {
+  const token = useAccessStore().accessToken;
+  return baseRequestClient.post('/system/auth/logout', undefined, {
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      'X-Request-Id': crypto.randomUUID(),
+    },
     withCredentials: true,
   });
 }

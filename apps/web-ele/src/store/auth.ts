@@ -11,6 +11,7 @@ import { ElNotification } from 'element-plus';
 import { defineStore } from 'pinia';
 
 import { getAccessCodesApi, getUserInfoApi, loginApi, logoutApi } from '#/api';
+import { logoutIdleSessionApi } from '#/api/core/auth';
 import { $t } from '#/locales';
 
 export const useAuthStore = defineStore('auth', () => {
@@ -85,12 +86,7 @@ export const useAuthStore = defineStore('auth', () => {
     };
   }
 
-  async function logout(redirect: boolean = true) {
-    try {
-      await logoutApi();
-    } catch {
-      // 不做任何处理
-    }
+  async function finishLogout(redirect: boolean) {
     resetAllStores();
     accessStore.setLoginExpired(false);
 
@@ -112,6 +108,27 @@ export const useAuthStore = defineStore('auth', () => {
     });
   }
 
+  async function logout(redirect: boolean = true) {
+    try {
+      await logoutApi();
+    } catch {
+      // 会话失效时仍清理本地凭据。
+    }
+    await finishLogout(redirect);
+  }
+
+  async function lockIdleSession() {
+    // Start remote revocation with the current token, then clear local credentials
+    // immediately so a slow or unavailable API cannot leave sensitive pages visible.
+    const revoke = logoutIdleSessionApi().catch(() => {});
+    await finishLogout(false);
+    void revoke;
+  }
+
+  async function clearLocalSession(redirect: boolean = true) {
+    await finishLogout(redirect);
+  }
+
   async function fetchUserInfo() {
     const userInfo = await getUserInfoApi();
     userStore.setUserInfo(userInfo);
@@ -128,5 +145,7 @@ export const useAuthStore = defineStore('auth', () => {
     fetchUserInfo,
     loginLoading,
     logout,
+    lockIdleSession,
+    clearLocalSession,
   };
 });
