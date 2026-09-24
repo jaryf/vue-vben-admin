@@ -25,6 +25,17 @@ const messageReason = ref('');
 const messageContext = ref<MessageContext | null>(null);
 const contextOpen = ref(false);
 const filter = reactive({ conversationId: '', memberUserId: '', type: '', status: '', sourceBottleId: '' });
+const messageFilter = reactive({ messageId: '', conversationId: '', senderMemberType: '', senderMemberId: '', messageType: '', status: '', moderationStatus: '', createdRange: [] as Date[] });
+const searchedMessages = ref<MessageRow[]>([]);
+const searchedNextCursor = ref<string | null>(null);
+const searchedCursorStack = ref<string[]>([]);
+const searchedReason = ref('');
+const searchedQuery = ref<Record<string, unknown>>({});
+const searchingMessages = ref(false);
+const messageStatuses = [['created', '已创建'], ['pending_review', '待审核'], ['approved', '已通过'], ['sent', '已发送'], ['delivered', '已送达'], ['read', '已读'], ['rejected', '已拒绝'], ['send_failed', '发送失败'], ['recalled', '已撤回'], ['admin_removed', '管理员已下架']];
+const moderationStatuses = [['pending', '待审核'], ['approved', '已通过'], ['rejected', '已拒绝'], ['manual_review', '人工复核']];
+const messageStatusText = (value: string) => messageStatuses.find(([code]) => code === value)?.[1] || value;
+const moderationStatusText = (value: string) => moderationStatuses.find(([code]) => code === value)?.[1] || value;
 const stableCode = (value: string) => /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(value);
 
 async function reason(prompt: string) {
@@ -64,6 +75,45 @@ async function openMessages() {
   messageReason.value = await reason(`浏览会话 #${detail.value.conversation.conversationId} 的消息元数据，请填写原因`);
   await loadMessages();
 }
+async function loadSearchedMessages(cursor = '') {
+  if (!searchedReason.value) return;
+  searchingMessages.value = true;
+  try {
+    const result = await listMessages({ ...searchedQuery.value, reasonCode: searchedReason.value, cursor: cursor || undefined, limit: 20 });
+    searchedMessages.value = result.items || [];
+    searchedNextCursor.value = result.nextCursor;
+  } finally { searchingMessages.value = false; }
+}
+async function searchAllMessages() {
+  if (messageFilter.messageId.trim() && !/^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$/.test(messageFilter.messageId.trim())) { ElMessage.warning('请输入有效的消息 UUID'); return; }
+  if ([messageFilter.conversationId, messageFilter.senderMemberId].some((value) => value.trim() && !/^[1-9]\d*$/.test(value.trim()))) { ElMessage.warning('会话和发送者 ID 必须为正整数'); return; }
+  if (messageFilter.createdRange?.length === 2 && messageFilter.createdRange[0]!.getTime() >= messageFilter.createdRange[1]!.getTime()) { ElMessage.warning('结束时间必须晚于开始时间'); return; }
+  searchedReason.value = await reason('跨会话检索消息元数据，请填写审计原因');
+  searchedQuery.value = {
+    messageId: messageFilter.messageId.trim() || undefined,
+    conversationId: messageFilter.conversationId.trim() || undefined,
+    senderMemberType: messageFilter.senderMemberType || undefined,
+    senderMemberId: messageFilter.senderMemberId.trim() || undefined,
+    messageType: messageFilter.messageType || undefined,
+    status: messageFilter.status || undefined,
+    moderationStatus: messageFilter.moderationStatus || undefined,
+    createdFrom: messageFilter.createdRange?.[0]?.toISOString(),
+    createdUntil: messageFilter.createdRange?.[1]?.toISOString(),
+  };
+  searchedCursorStack.value = [];
+  searchedMessages.value = [];
+  searchedNextCursor.value = null;
+  await loadSearchedMessages();
+}
+function nextSearchedMessages() {
+  if (!searchedNextCursor.value) return;
+  searchedCursorStack.value.push(searchedNextCursor.value);
+  void loadSearchedMessages(searchedNextCursor.value);
+}
+function previousSearchedMessages() {
+  searchedCursorStack.value.pop();
+  void loadSearchedMessages(searchedCursorStack.value.at(-1) || '');
+}
 async function openContext(row: MessageRow) {
   const reasonCode = await reason(`查看消息 ${row.messageId} 的上下文，请填写原因`);
   messageContext.value = await getMessageContext(row.messageId, reasonCode);
@@ -81,6 +131,7 @@ async function remove(row: MessageRow) {
   await removeMessage(row.messageId, reasonCode);
   ElMessage.success('消息已下架');
   if (messageReason.value) await loadMessages();
+  if (searchedReason.value) await loadSearchedMessages(searchedCursorStack.value.at(-1) || '');
   if (messageContext.value?.targetMessage.messageId === row.messageId) contextOpen.value = false;
 }
 onMounted(() => { void load(); });
@@ -92,6 +143,34 @@ onMounted(() => { void load(); });
     <div class="mb-4 flex flex-wrap gap-3"><ElInput v-model="filter.conversationId" placeholder="会话 ID" clearable class="!w-32" /><ElInput v-model="filter.memberUserId" placeholder="参与用户 ID" clearable class="!w-36" /><ElInput v-model="filter.sourceBottleId" placeholder="来源漂流瓶 ID" clearable class="!w-40" /><ElInput v-model="filter.type" placeholder="会话类型" clearable class="!w-32" /><ElInput v-model="filter.status" placeholder="状态代码" clearable class="!w-32" /><ElButton @click="search">查询</ElButton></div>
     <ElTable v-loading="loading" :data="rows" row-key="conversationId"><ElTableColumn prop="conversationId" label="会话 ID" width="110" /><ElTableColumn prop="type" label="类型" width="120" /><ElTableColumn prop="status" label="状态" width="110" /><ElTableColumn prop="sourceBottleId" label="来源漂流瓶" width="125" /><ElTableColumn prop="memberCount" label="参与者" width="90" /><ElTableColumn prop="messageCount" label="消息数" width="90" /><ElTableColumn prop="reportCount" label="举报数" width="90" /><ElTableColumn prop="lastMessageAt" label="最近消息" min-width="175" /><ElTableColumn label="操作" width="95"><template #default="{ row }"><ElButton link type="primary" @click="openDetail(row)">详情</ElButton></template></ElTableColumn></ElTable>
     <div class="mt-4 flex justify-end gap-2"><ElButton :disabled="cursorStack.length === 0" @click="previous">上一页</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton></div>
+  </ElCard>
+  <ElCard class="mt-5" shadow="never">
+    <template #header>跨会话消息元数据检索</template>
+    <ElAlert class="mb-4" type="info" show-icon :closable="false" title="检索前需填写审计原因；每页读取均记录敏感访问。结果只包含本地消息元数据，不包含 IM 正文或媒体原文件。" />
+    <div class="mb-4 flex flex-wrap gap-3">
+      <ElInput v-model="messageFilter.messageId" placeholder="消息 UUID" clearable class="!w-64" />
+      <ElInput v-model="messageFilter.conversationId" placeholder="会话 ID" clearable class="!w-32" />
+      <ElSelect v-model="messageFilter.senderMemberType" clearable placeholder="发送者类型" class="!w-36"><ElOption label="App 用户" value="user" /><ElOption label="AI 角色" value="ai_role" /></ElSelect>
+      <ElInput v-model="messageFilter.senderMemberId" placeholder="发送者 ID" clearable class="!w-32" />
+      <ElSelect v-model="messageFilter.messageType" clearable placeholder="消息类型" class="!w-36"><ElOption label="文字" value="text" /><ElOption label="图片" value="image" /><ElOption label="语音" value="voice" /><ElOption label="视频" value="video" /><ElOption label="自定义" value="custom" /></ElSelect>
+      <ElSelect v-model="messageFilter.status" clearable placeholder="发送状态" class="!w-40"><ElOption v-for="[value, label] in messageStatuses" :key="value" :value="value" :label="label" /></ElSelect>
+      <ElSelect v-model="messageFilter.moderationStatus" clearable placeholder="审核状态" class="!w-36"><ElOption v-for="[value, label] in moderationStatuses" :key="value" :value="value" :label="label" /></ElSelect>
+      <ElDatePicker v-model="messageFilter.createdRange" type="datetimerange" range-separator="至" start-placeholder="创建开始" end-placeholder="创建结束" class="!w-[390px]" />
+      <ElButton type="primary" :loading="searchingMessages" @click="searchAllMessages">填写原因并查询</ElButton>
+    </div>
+    <ElTable v-loading="searchingMessages" :data="searchedMessages" row-key="messageId">
+      <ElTableColumn prop="messageId" label="消息 ID" min-width="245" />
+      <ElTableColumn prop="conversationId" label="会话 ID" width="105" />
+      <ElTableColumn prop="sequenceNo" label="序号" width="75" />
+      <ElTableColumn label="发送者" min-width="130"><template #default="{ row }">{{ row.senderMemberType }} #{{ row.senderMemberId }}</template></ElTableColumn>
+      <ElTableColumn prop="messageType" label="类型" width="95" />
+      <ElTableColumn label="发送状态" width="110"><template #default="{ row }">{{ messageStatusText(row.status) }}</template></ElTableColumn>
+      <ElTableColumn label="审核状态" width="110"><template #default="{ row }">{{ moderationStatusText(row.moderationStatus) }}</template></ElTableColumn>
+      <ElTableColumn prop="mediaAssetId" label="媒体资产 ID" width="110" />
+      <ElTableColumn prop="createdAt" label="创建时间" min-width="175" />
+      <ElTableColumn label="操作" width="130" fixed="right"><template #default="{ row }"><ElButton link type="primary" @click="openContext(row)">上下文</ElButton><ElButton v-if="canRemove && row.status !== 'admin_removed'" link type="danger" @click="remove(row)">下架</ElButton></template></ElTableColumn>
+    </ElTable>
+    <div class="mt-4 flex justify-end gap-2"><ElButton :disabled="searchedCursorStack.length === 0" @click="previousSearchedMessages">上一页</ElButton><ElButton :disabled="!searchedNextCursor" @click="nextSearchedMessages">下一页</ElButton></div>
   </ElCard>
   <ElDrawer v-model="detailOpen" :title="`会话 #${detail?.conversation.conversationId || ''}`" size="72%" @closed="detail = null">
     <template v-if="detail"><ElDescriptions :column="2" border><ElDescriptionsItem label="类型">{{ detail.conversation.type }}</ElDescriptionsItem><ElDescriptionsItem label="状态">{{ detail.conversation.status }}</ElDescriptionsItem><ElDescriptionsItem label="消息总数">{{ detail.conversation.messageCount }}</ElDescriptionsItem><ElDescriptionsItem label="消息正文">不可用</ElDescriptionsItem></ElDescriptions><ElDivider>参与者</ElDivider><ElTable :data="detail.members"><ElTableColumn prop="memberType" label="类型" /><ElTableColumn prop="memberId" label="成员 ID" /><ElTableColumn label="显示名称"><template #default="{ row }">{{ row.identity?.displayName || '—' }}</template></ElTableColumn><ElTableColumn prop="role" label="角色" /><ElTableColumn prop="status" label="状态" /></ElTable><ElDivider>消息元数据</ElDivider><ElButton type="primary" class="mb-4" @click="openMessages">填写原因并查看</ElButton><ElTable :data="messages"><ElTableColumn prop="sequenceNo" label="序号" width="75" /><ElTableColumn prop="messageId" label="消息 ID" min-width="230" /><ElTableColumn prop="senderMemberId" label="发送者" width="90" /><ElTableColumn prop="messageType" label="类型" width="90" /><ElTableColumn prop="status" label="状态" width="105" /><ElTableColumn prop="moderationStatus" label="审核状态" width="110" /><ElTableColumn prop="createdAt" label="时间" min-width="175" /><ElTableColumn label="操作" width="130"><template #default="{ row }"><ElButton link type="primary" @click="openContext(row)">上下文</ElButton><ElButton v-if="canRemove && row.status !== 'admin_removed'" link type="danger" @click="remove(row)">下架</ElButton></template></ElTableColumn></ElTable><div class="mt-3 text-right"><ElButton v-if="messageNextCursor" @click="loadMessages(messageNextCursor)">加载更多</ElButton></div></template>
