@@ -1,6 +1,6 @@
 {
   "title": "用户与交易",
-  "appUser": {"title": "App 用户", "forceLogout": "强制下线", "updateStatus": "调整状态", "updateBirthDate": "修改出生日期", "quotaAdjust": "调整额度", "entitlementAdjust": "补发权益", "deletionReview": "注销复核"},
+  "appUser": {"title": "App 用户", "forceLogout": "强制下线", "updateStatus": "调整状态", "updateBirthDate": "修改出生日期", "quotaAdjust": "调整额度", "entitlementAdjust": "补发权益", "deletionReview": "注销复核", "emailExport": "用户完整邮箱导出"},
   "order": {"title": "商品与交易", "productManage": "管理商品"},
   "financeReview": {"title": "财务异常人工处理", "manage": "处理财务异常"}
 }
