@@ -6,7 +6,7 @@ import { useAccessStore, useUserStore } from '@vben/stores';
 import { startProgress, stopProgress } from '@vben/utils';
 
 import { accessRoutes, coreRouteNames } from '#/router/routes';
-import { getMFAStatusApi } from '#/api/core/auth';
+import { getAccessCodesApi, getMFAStatusApi } from '#/api/core/auth';
 import { useAuthStore } from '#/store';
 
 import { generateAccess } from './access';
@@ -51,47 +51,52 @@ function setupAccessGuard(router: Router) {
     const userStore = useUserStore();
     const authStore = useAuthStore();
 
-    // 基本路由，这些路由不需要进入权限拦截
-    if (coreRouteNames.includes(to.name as string)) {
-      if ((to.name === 'Profile' || to.name === 'ProfileSettings') && !accessStore.accessToken) {
-        return { path: LOGIN_PATH, replace: true };
-      }
-      if (to.path === LOGIN_PATH && accessStore.accessToken) {
-        if (!(await getMFAStatusApi()).enabled) return '/auth/mfa-setup';
-        return decodeURIComponent(
-          (to.query?.redirect as string) ||
-            userStore.userInfo?.homePath ||
-            preferences.app.defaultHomePath,
-        );
-      }
-      return true;
-    }
-
     // accessToken 检查
     if (!accessStore.accessToken) {
-      // 明确声明忽略权限访问权限，则可以访问
-      if (to.meta.ignoreAccess) {
+      // 登录页必须按 path 判断，避免带 redirect 查询参数时再次嵌套重定向。
+      if (to.path === LOGIN_PATH || to.meta.ignoreAccess) {
         return true;
       }
 
       // 没有访问权限，跳转登录页面
-      if (to.fullPath !== LOGIN_PATH) {
-        return {
-          path: LOGIN_PATH,
-          // 如不需要，直接删除 query
-          query:
-            to.fullPath === preferences.app.defaultHomePath
-              ? {}
-              : { redirect: encodeURIComponent(to.fullPath) },
-          // 携带当前跳转的页面，登录后重新跳转该页面
-          replace: true,
-        };
-      }
-      return to;
+      return {
+        path: LOGIN_PATH,
+        // 如不需要，直接删除 query
+        query:
+          to.fullPath === preferences.app.defaultHomePath
+            ? {}
+            : { redirect: encodeURIComponent(to.fullPath) },
+        // 携带当前跳转的页面，登录后重新跳转该页面
+        replace: true,
+      };
     }
 
-    if (!(await getMFAStatusApi()).enabled) {
-      return to.path === '/auth/mfa-setup' ? true : '/auth/mfa-setup';
+    // MFA 是所有已登录页面（包括 Profile 等核心路由）的前置条件。
+    // 这段判断必须位于 coreRouteNames 短路返回之前。
+    const mfaEnabled = (await getMFAStatusApi()).enabled;
+    if (!mfaEnabled) {
+      return to.path === '/auth/mfa-setup'
+        ? true
+        : { path: '/auth/mfa-setup', replace: true };
+    }
+
+    // MFA 已确认启用后才允许恢复业务权限。覆盖绑定完成后刷新恢复码页、
+    // 会话恢复时权限码尚未加载等场景。
+    if (!accessStore.isAccessChecked && accessStore.accessCodes.length === 0) {
+      accessStore.setAccessCodes(await getAccessCodesApi());
+    }
+
+    if (to.path === LOGIN_PATH || to.path === '/auth/mfa-setup') {
+      return decodeURIComponent(
+        (to.query?.redirect as string) ||
+          userStore.userInfo?.homePath ||
+          preferences.app.defaultHomePath,
+      );
+    }
+
+    // 已通过令牌和 MFA 检查的基本路由无需再生成动态权限路由。
+    if (coreRouteNames.includes(to.name as string)) {
+      return true;
     }
 
     // 是否已经生成过动态路由

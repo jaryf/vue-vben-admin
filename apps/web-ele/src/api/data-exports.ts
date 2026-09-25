@@ -1,10 +1,11 @@
 import { requestClient } from '#/api/request';
+import type { DataExportDataset } from '#/constants/data-export';
 
 import type { CursorPage } from './app-users';
 
 export interface DataExportTask {
   exportId: number;
-  dataset: 'audit_logs' | 'coin_ledger' | 'entitlement_ledger' | 'finance_reviews' | 'orders' | 'payment_transactions' | 'subscriptions';
+  dataset: DataExportDataset;
   fromAt: string;
   toAt: string;
   purpose: string;
@@ -25,7 +26,7 @@ export interface DataExportTask {
 export const listDataExports = (params: Record<string, unknown>) =>
   requestClient.get<CursorPage<DataExportTask>>('/data-exports', { params });
 export const getDataExport = (id: number) => requestClient.get<DataExportTask>(`/data-exports/${id}`);
-export const createDataExport = (data: { dataset: string; fromAt: string; toAt: string; purpose: string }, key: string) =>
+export const createDataExport = (data: { dataset: DataExportDataset; fromAt: string; toAt: string; purpose: string }, key: string) =>
   requestClient.post<DataExportTask>('/data-exports', data, { headers: { 'Idempotency-Key': key } });
 export const approveDataExport = (id: number, note: string) => requestClient.post<DataExportTask>(`/data-exports/${id}/approve`, { note });
 export const rejectDataExport = (id: number, note: string) => requestClient.post<DataExportTask>(`/data-exports/${id}/reject`, { note });

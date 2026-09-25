@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 
 import { useAccess } from '@vben/access';
+import { useTimezoneStore } from '@vben/stores';
 
 import { ElMessage, ElMessageBox } from 'element-plus';
 
@@ -10,8 +11,11 @@ import {
 } from '#/api/conversations';
 import type { ConversationDetail, ConversationRow, MessageContext, MessageRow } from '#/api/conversations';
 import AdminTime from '#/components/admin-time.vue';
+import { adminDateTimeRangeToUtc } from '#/utils/admin-datetime';
+import { validateReasonCode } from '#/utils/reason-code';
 
 const { hasAccessByCodes } = useAccess();
+const timezoneStore = useTimezoneStore();
 const canRemove = computed(() => hasAccessByCodes(['message.remove']));
 const canExtended = computed(() => hasAccessByCodes(['message.read_context']) && hasAccessByCodes(['message.read_context_extended']));
 const canPreview = computed(() => hasAccessByCodes(['message.read_context']) && hasAccessByCodes(['message.media.preview']));
@@ -33,7 +37,7 @@ const previewMessageId = ref('');
 const previewType = ref('');
 let previewExpiryTimer: null | number = null;
 const filter = reactive({ conversationId: '', memberUserId: '', type: '', status: '', sourceBottleId: '' });
-const messageFilter = reactive({ messageId: '', conversationId: '', senderMemberType: '', senderMemberId: '', messageType: '', status: '', moderationStatus: '', createdRange: [] as Date[] });
+const messageFilter = reactive({ messageId: '', conversationId: '', senderMemberType: '', senderMemberId: '', messageType: '', status: '', moderationStatus: '', createdRange: [] as string[] });
 const searchedMessages = ref<MessageRow[]>([]);
 const searchedNextCursor = ref<string | null>(null);
 const searchedCursorStack = ref<string[]>([]);
@@ -44,11 +48,9 @@ const messageStatuses = [['created', '已创建'], ['pending_review', '待审核
 const moderationStatuses = [['pending', '待审核'], ['approved', '已通过'], ['rejected', '已拒绝'], ['manual_review', '人工复核']];
 const messageStatusText = (value: string) => messageStatuses.find(([code]) => code === value)?.[1] || value;
 const moderationStatusText = (value: string) => moderationStatuses.find(([code]) => code === value)?.[1] || value;
-const stableCode = (value: string) => /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(value);
-
 async function reason(prompt: string) {
   const { value } = await ElMessageBox.prompt(prompt, '审计原因', {
-    inputValidator: (text) => stableCode(text.trim()) || '请输入 1–64 位稳定原因代码',
+    inputValidator: validateReasonCode,
   });
   return value.trim();
 }
@@ -95,7 +97,16 @@ async function loadSearchedMessages(cursor = '') {
 async function searchAllMessages() {
   if (messageFilter.messageId.trim() && !/^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$/.test(messageFilter.messageId.trim())) { ElMessage.warning('请输入有效的消息 UUID'); return; }
   if ([messageFilter.conversationId, messageFilter.senderMemberId].some((value) => value.trim() && !/^[1-9]\d*$/.test(value.trim()))) { ElMessage.warning('会话和发送者 ID 必须为正整数'); return; }
-  if (messageFilter.createdRange?.length === 2 && messageFilter.createdRange[0]!.getTime() >= messageFilter.createdRange[1]!.getTime()) { ElMessage.warning('结束时间必须晚于开始时间'); return; }
+  let createdRange: [string, string] | undefined;
+  try {
+    createdRange = adminDateTimeRangeToUtc(
+      messageFilter.createdRange,
+      timezoneStore.timezone,
+    );
+  } catch (error) {
+    ElMessage.warning(error instanceof Error ? error.message : '创建时间范围无效');
+    return;
+  }
   searchedReason.value = await reason('跨会话检索消息元数据，请填写审计原因');
   searchedQuery.value = {
     messageId: messageFilter.messageId.trim() || undefined,
@@ -105,8 +116,8 @@ async function searchAllMessages() {
     messageType: messageFilter.messageType || undefined,
     status: messageFilter.status || undefined,
     moderationStatus: messageFilter.moderationStatus || undefined,
-    createdFrom: messageFilter.createdRange?.[0]?.toISOString(),
-    createdUntil: messageFilter.createdRange?.[1]?.toISOString(),
+    createdFrom: createdRange?.[0],
+    createdUntil: createdRange?.[1],
   };
   searchedCursorStack.value = [];
   searchedMessages.value = [];
@@ -197,7 +208,7 @@ onBeforeUnmount(clearPreview);
       <ElSelect v-model="messageFilter.messageType" clearable placeholder="消息类型" class="!w-36"><ElOption label="文字" value="text" /><ElOption label="图片" value="image" /><ElOption label="语音" value="voice" /><ElOption label="视频" value="video" /><ElOption label="自定义" value="custom" /></ElSelect>
       <ElSelect v-model="messageFilter.status" clearable placeholder="发送状态" class="!w-40"><ElOption v-for="[value, label] in messageStatuses" :key="value" :value="value" :label="label" /></ElSelect>
       <ElSelect v-model="messageFilter.moderationStatus" clearable placeholder="审核状态" class="!w-36"><ElOption v-for="[value, label] in moderationStatuses" :key="value" :value="value" :label="label" /></ElSelect>
-      <ElDatePicker v-model="messageFilter.createdRange" type="datetimerange" range-separator="至" start-placeholder="创建开始" end-placeholder="创建结束" class="!w-[390px]" />
+      <ElDatePicker v-model="messageFilter.createdRange" type="datetimerange" value-format="YYYY-MM-DD HH:mm:ss" range-separator="至" start-placeholder="创建开始" end-placeholder="创建结束" class="!w-[390px]" />
       <ElButton type="primary" :loading="searchingMessages" @click="searchAllMessages">填写原因并查询</ElButton>
     </div>
     <ElTable v-loading="searchingMessages" :data="searchedMessages" row-key="messageId">

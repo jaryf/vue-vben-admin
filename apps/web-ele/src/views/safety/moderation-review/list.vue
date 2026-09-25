@@ -1,18 +1,24 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 
+import { useTimezoneStore } from '@vben/stores';
+
 import { ElMessage, ElMessageBox } from 'element-plus';
 
 import { decideReview, getReview, listReviews } from '#/api/moderation';
 import type { ReviewDetail, ReviewRow } from '#/api/moderation';
 import AdminTime from '#/components/admin-time.vue';
+import { adminDateTimeRangeToUtc } from '#/utils/admin-datetime';
+import { validateReasonCode } from '#/utils/reason-code';
+
+const timezoneStore = useTimezoneStore();
 
 const filter = reactive({
   reviewId: '', targetType: '', targetEntityId: '', targetMessageId: '',
   scene: '', languageCode: '', modelName: '', waitingMinutes: '',
   status: 'manual_review', finalDecision: '', riskLevel: '', category: '',
 });
-const requestedRange = ref<Date[] | null>(null);
+const requestedRange = ref<string[] | null>(null);
 const rows = ref<ReviewRow[]>([]);
 const nextCursor = ref<string | null>(null);
 const cursorStack = ref<string[]>([]);
@@ -28,6 +34,23 @@ const saving = ref(false);
 const decisionLabels: Record<string, string> = { approve: '通过', reject: '拒绝', manual_review: '继续人工复核', escalate: '升级复核' };
 const statusLabels: Record<string, string> = { manual_review: '人工复核', approved: '已通过', rejected: '已拒绝', pending: '待审核', failed: '失败' };
 const targetLabels: Record<string, string> = { bottle: '漂流瓶', message: '消息', media: '媒体' };
+const rejectionReasonLabels: Record<string, string> = {
+  ADULT_CONTENT_DISABLED: '成人内容功能未启用',
+  CONTACT_INFORMATION_NOT_ALLOWED: '不允许联系方式',
+  DUPLICATE_SPAM: '重复或垃圾内容',
+  EXTERNAL_LINK_NOT_ALLOWED: '不允许外部链接',
+  HARASSMENT: '骚扰内容',
+  ILLEGAL_CONTENT: '违法内容',
+  MINOR_SAFETY_RISK: '未成年人安全风险',
+  PROMOTION_NOT_ALLOWED: '不允许推广内容',
+  QR_CODE_NOT_ALLOWED: '不允许二维码',
+  REVIEW_UNAVAILABLE: '审核能力不可用',
+  SCAM_RISK: '诈骗风险',
+  THREAT: '威胁内容',
+  UNSUPPORTED_MEDIA: '不支持的媒体',
+};
+const rejectionReasons = Object.keys(rejectionReasonLabels);
+const moderationDecisionReasonPattern = /^[A-Za-z0-9][A-Za-z0-9_]{0,63}$/;
 const decisionText = (value: string) => decisionLabels[value] || value || '—';
 const selectedDecisionLabel = computed(() => decisionLabels[decision.value] || decision.value);
 
@@ -41,6 +64,10 @@ function waitingTime(value: string) {
 async function load(cursor = '') {
   loading.value = true;
   try {
+    const requestedUtc = adminDateTimeRangeToUtc(
+      requestedRange.value,
+      timezoneStore.timezone,
+    );
     const result = await listReviews({
       limit: 20, cursor: cursor || undefined,
       reviewId: filter.reviewId.trim() || undefined,
@@ -55,23 +82,33 @@ async function load(cursor = '') {
       finalDecision: filter.finalDecision || undefined,
       riskLevel: filter.riskLevel.trim() || undefined,
       category: filter.category.trim() || undefined,
-      requestedFrom: requestedRange.value?.[0]?.toISOString(),
-      requestedUntil: requestedRange.value?.[1]?.toISOString(),
+      requestedFrom: requestedUtc?.[0],
+      requestedUntil: requestedUtc?.[1],
     });
     rows.value = result.items || [];
     nextCursor.value = result.nextCursor;
   } finally { loading.value = false; }
 }
 
-function search() { cursorStack.value = []; void load(); }
+function search() {
+  try {
+    adminDateTimeRangeToUtc(requestedRange.value, timezoneStore.timezone);
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '请求时间范围无效');
+    return;
+  }
+  cursorStack.value = [];
+  void load();
+}
 function targetTypeChanged() { filter.targetEntityId = ''; filter.targetMessageId = ''; filter.languageCode = ''; }
 function statusChanged() { if (filter.status && filter.status !== 'manual_review') filter.waitingMinutes = ''; }
+function decisionChanged() { decisionReason.value = ''; }
 function next() { if (!nextCursor.value) return; cursorStack.value.push(nextCursor.value); void load(nextCursor.value); }
 function previous() { cursorStack.value.pop(); void load(cursorStack.value.at(-1) || ''); }
 
 async function openDetail(id: number) {
   const { value } = await ElMessageBox.prompt('请输入查看脱敏证据的原因代码', '查看审核详情', {
-    inputPattern: /^[A-Za-z0-9][A-Za-z0-9._-]*$/, inputErrorMessage: '请输入有效的原因代码',
+    inputValidator: validateReasonCode,
   });
   detailReason.value = value.trim();
   detail.value = await getReview(id, detailReason.value);
@@ -82,16 +119,20 @@ async function openDetail(id: number) {
 
 async function submitDecision() {
   if (!detail.value || !detail.value.allowedDecisions.includes(decision.value)) return;
-  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(decisionReason.value)) {
-    ElMessage.error('请输入有效的决策原因代码'); return;
+  const normalizedReason = decisionReason.value.trim();
+  const validReason = decision.value === 'reject'
+    ? rejectionReasons.includes(normalizedReason)
+    : moderationDecisionReasonPattern.test(normalizedReason);
+  if (!validReason) {
+    ElMessage.error(decision.value === 'reject' ? '请选择固定的拒绝原因' : '原因代码仅允许字母、数字和下划线'); return;
   }
   saving.value = true;
   try {
     detail.value = await decideReview(detail.value.review.reviewId, {
-      decision: decision.value, reasonCode: decisionReason.value.trim(), note: decisionNote.value.trim() || null,
+      decision: decision.value, reasonCode: normalizedReason.toUpperCase(), note: decisionNote.value.trim() || null,
     }, decisionKey.value);
     ElMessage.success('审核决策已记录');
-    decision.value = '';
+    decision.value = ''; decisionReason.value = '';
     decisionKey.value = crypto.randomUUID();
     await load(cursorStack.value.at(-1) || '');
   } finally { saving.value = false; }
@@ -119,7 +160,7 @@ onMounted(() => { void load(); });
         <ElSelect v-model="filter.finalDecision" clearable placeholder="全部决策" class="!w-36"><ElOption label="通过" value="approve" /><ElOption label="拒绝" value="reject" /><ElOption label="继续人工复核" value="manual_review" /></ElSelect>
         <ElInput v-model="filter.riskLevel" placeholder="风险等级" clearable class="!w-36" />
         <ElInput v-model="filter.category" placeholder="风险分类" clearable class="!w-36" />
-        <ElDatePicker v-model="requestedRange" type="datetimerange" start-placeholder="请求开始" end-placeholder="请求结束" class="!w-[360px]" />
+        <ElDatePicker v-model="requestedRange" type="datetimerange" value-format="YYYY-MM-DD HH:mm:ss" start-placeholder="请求开始" end-placeholder="请求结束" class="!w-[360px]" />
         <ElButton @click="search">查询</ElButton>
       </div>
       <ElTable v-loading="loading" :data="rows" row-key="reviewId">
@@ -147,8 +188,13 @@ onMounted(() => { void load(); });
         <template v-if="detail.allowedDecisions.length">
           <ElDivider>人工决策</ElDivider>
           <ElForm label-position="top" @submit.prevent="submitDecision">
-            <ElFormItem label="决策"><ElRadioGroup v-model="decision"><ElRadio v-for="item in detail.allowedDecisions" :key="item" :value="item">{{ decisionLabels[item] || item }}</ElRadio></ElRadioGroup></ElFormItem>
-            <ElFormItem label="原因代码"><ElInput v-model="decisionReason" placeholder="例如 safety_reviewed" maxlength="64" /></ElFormItem>
+            <ElFormItem label="决策"><ElRadioGroup v-model="decision" @change="decisionChanged"><ElRadio v-for="item in detail.allowedDecisions" :key="item" :value="item">{{ decisionLabels[item] || item }}</ElRadio></ElRadioGroup></ElFormItem>
+            <ElFormItem label="原因代码">
+              <ElSelect v-if="decision === 'reject'" v-model="decisionReason" placeholder="请选择固定拒绝原因" filterable class="w-full">
+                <ElOption v-for="item in rejectionReasons" :key="item" :label="`${rejectionReasonLabels[item]}（${item}）`" :value="item" />
+              </ElSelect>
+              <ElInput v-else v-model="decisionReason" placeholder="例如 SAFETY_REVIEWED（字母、数字、下划线）" maxlength="64" />
+            </ElFormItem>
             <ElFormItem label="备注"><ElInput v-model="decisionNote" type="textarea" maxlength="1000" show-word-limit /></ElFormItem>
             <ElButton type="primary" :disabled="!decision" :loading="saving" @click="submitDecision">提交{{ selectedDecisionLabel }}</ElButton>
           </ElForm>

@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 
 import { useAccess } from '@vben/access';
+import { useTimezoneStore } from '@vben/stores';
 
 import { ElMessage, ElMessageBox } from 'element-plus';
 
@@ -11,15 +12,17 @@ import {
 } from '#/api/commerce';
 import type { OrderDetail, ProductRow } from '#/api/commerce';
 import AdminTime from '#/components/admin-time.vue';
+import { adminDateTimeRangeToUtc } from '#/utils/admin-datetime';
 
 const { hasAccessByCodes } = useAccess();
+const timezoneStore = useTimezoneStore();
 const canManageProducts = computed(() => hasAccessByCodes(['product.manage']));
 const active = ref<'coins' | 'entitlements' | 'orders' | 'payments' | 'products' | 'subscriptions'>('orders');
 const emptyFilter = () => ({
   id: '', userId: '', status: '', orderNo: '', productType: '', internalCode: '',
   currency: '', paymentChannel: '', region: '', orderId: '', productId: '',
   channelTransactionId: '', originalTransactionId: '', transactionType: '',
-  createdRange: [] as Date[], periodEndsRange: [] as Date[],
+  createdRange: [] as string[], periodEndsRange: [] as string[],
 });
 const filter = reactive(emptyFilter());
 const rows = ref<Record<string, any>[]>([]);
@@ -102,9 +105,13 @@ async function load(cursor = '') {
     }
     const params: Record<string, unknown> = { limit: 20, cursor: cursor || undefined };
     if (active.value !== 'entitlements' && active.value !== 'coins') {
+      const createdRange = adminDateTimeRangeToUtc(
+        filter.createdRange,
+        timezoneStore.timezone,
+      );
       Object.assign(params, {
-        createdFrom: filter.createdRange?.[0]?.toISOString(),
-        createdUntil: filter.createdRange?.[1]?.toISOString(),
+        createdFrom: createdRange?.[0],
+        createdUntil: createdRange?.[1],
       });
     }
     if (active.value === 'orders') {
@@ -114,7 +121,11 @@ async function load(cursor = '') {
     } else if (active.value === 'payments') {
       Object.assign(params, { transactionId: filter.id.trim() || undefined, orderId: filter.orderId.trim() || undefined, userId: filter.userId.trim() || undefined, paymentChannel: filter.paymentChannel || undefined, channelTransactionId: filter.channelTransactionId.trim() || undefined, originalTransactionId: filter.originalTransactionId.trim() || undefined, transactionType: filter.transactionType || undefined, status: filter.status || undefined });
     } else if (active.value === 'subscriptions') {
-      Object.assign(params, { subscriptionId: filter.id.trim() || undefined, userId: filter.userId.trim() || undefined, productId: filter.productId.trim() || undefined, paymentChannel: filter.paymentChannel || undefined, originalTransactionId: filter.originalTransactionId.trim() || undefined, status: filter.status || undefined, periodEndsFrom: filter.periodEndsRange?.[0]?.toISOString(), periodEndsUntil: filter.periodEndsRange?.[1]?.toISOString() });
+      const periodEndsRange = adminDateTimeRangeToUtc(
+        filter.periodEndsRange,
+        timezoneStore.timezone,
+      );
+      Object.assign(params, { subscriptionId: filter.id.trim() || undefined, userId: filter.userId.trim() || undefined, productId: filter.productId.trim() || undefined, paymentChannel: filter.paymentChannel || undefined, originalTransactionId: filter.originalTransactionId.trim() || undefined, status: filter.status || undefined, periodEndsFrom: periodEndsRange?.[0], periodEndsUntil: periodEndsRange?.[1] });
     } else {
       Object.assign(params, { userId: filter.userId.trim() });
     }
@@ -136,7 +147,13 @@ function search() {
   }
   const ids = [filter.id, filter.userId, filter.orderId, filter.productId].filter(Boolean);
   if (ids.some((value) => !/^[1-9]\d*$/.test(value.trim()))) { ElMessage.warning('ID 必须为正整数'); return; }
-  if ((filter.createdRange?.length === 2 && filter.createdRange[0]!.getTime() >= filter.createdRange[1]!.getTime()) || (filter.periodEndsRange?.length === 2 && filter.periodEndsRange[0]!.getTime() >= filter.periodEndsRange[1]!.getTime())) { ElMessage.warning('结束时间必须晚于开始时间'); return; }
+  try {
+    adminDateTimeRangeToUtc(filter.createdRange, timezoneStore.timezone);
+    adminDateTimeRangeToUtc(filter.periodEndsRange, timezoneStore.timezone);
+  } catch (error) {
+    ElMessage.warning(error instanceof Error ? error.message : '时间范围无效');
+    return;
+  }
   cursorStack.value = []; void load();
 }
 function switchTab() {
@@ -190,8 +207,8 @@ onMounted(() => { void load(); });
         <ElInput v-if="active === 'payments' || active === 'subscriptions'" v-model="filter.originalTransactionId" placeholder="原始交易号" clearable class="!w-48" />
         <ElSelect v-if="active === 'payments'" v-model="filter.transactionType" clearable placeholder="交易类型" class="!w-36"><ElOption v-for="[value, label] in transactionTypes" :key="value" :value="value" :label="label" /></ElSelect>
         <ElSelect v-if="statusOptions.length" v-model="filter.status" clearable placeholder="状态" class="!w-40"><ElOption v-for="value in statusOptions" :key="value" :value="value" :label="statusText(value)" /></ElSelect>
-        <ElDatePicker v-if="active !== 'entitlements' && active !== 'coins'" v-model="filter.createdRange" type="datetimerange" range-separator="至" start-placeholder="创建开始" end-placeholder="创建结束" class="!w-[390px]" />
-        <ElDatePicker v-if="active === 'subscriptions'" v-model="filter.periodEndsRange" type="datetimerange" range-separator="至" start-placeholder="周期到期开始" end-placeholder="周期到期结束" class="!w-[390px]" />
+        <ElDatePicker v-if="active !== 'entitlements' && active !== 'coins'" v-model="filter.createdRange" type="datetimerange" value-format="YYYY-MM-DD HH:mm:ss" range-separator="至" start-placeholder="创建开始" end-placeholder="创建结束" class="!w-[390px]" />
+        <ElDatePicker v-if="active === 'subscriptions'" v-model="filter.periodEndsRange" type="datetimerange" value-format="YYYY-MM-DD HH:mm:ss" range-separator="至" start-placeholder="周期到期开始" end-placeholder="周期到期结束" class="!w-[390px]" />
         <ElButton @click="search">查询</ElButton>
       </div>
       <ElTable v-loading="loading" :data="rows">

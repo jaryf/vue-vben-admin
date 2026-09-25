@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 
 import { useAccess } from '@vben/access';
-import { useUserStore } from '@vben/stores';
+import { useTimezoneStore, useUserStore } from '@vben/stores';
 
 import { ElMessage, ElMessageBox } from 'element-plus';
 
@@ -13,9 +13,14 @@ import {
 } from '#/api/config-versions';
 import type { ConfigVersion } from '#/api/config-versions';
 import AdminTime from '#/components/admin-time.vue';
+import {
+  adminDateTimeToUtc,
+  utcToAdminDateTime,
+} from '#/utils/admin-datetime';
 
 const { hasAccessByCodes } = useAccess();
 const userStore = useUserStore();
+const timezoneStore = useTimezoneStore();
 const canWrite = computed(() => hasAccessByCodes(['config_version.write']));
 const canApprove = computed(() => hasAccessByCodes(['config_version.approve']));
 const canPublish = computed(() => hasAccessByCodes(['config_version.publish']));
@@ -51,7 +56,10 @@ const configuredDomains = (row: ConfigVersion, kind: 'blockedDomains' | 'shortli
   : ('shortlinkDomains' in row.payload ? row.payload.shortlinkDomains || [] : []);
 const configuredThresholds = (row: ConfigVersion) => 'riskThresholds' in row.payload ? row.payload.riskThresholds : undefined;
 const configuredAI = (row: ConfigVersion) => 'maxPercent' in row.payload ? row.payload : null;
-const currentUserId = computed(() => userStore.userInfo?.userId);
+const currentUserId = computed(() => {
+  const value = Number(userStore.userInfo?.userId);
+  return Number.isSafeInteger(value) && value > 0 ? value : null;
+});
 function payloadFields(row: ConfigVersion): Record<string, string> {
   if (row.scope === 'feature_flags') {
     const values = configuredFlags(row);
@@ -197,14 +205,31 @@ async function action(row: ConfigVersion, kind: 'approve' | 'cancel_schedule' | 
     const result = await ElMessageBox.prompt('输入新的回滚版本号。创建后仍需由其他管理员审批并发布。', `回滚 ${row.version}`, { inputPattern: /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/, inputErrorMessage: '版本号格式无效' });
     await rollbackConfigVersion(row.versionId, result.value, crypto.randomUUID());
   } else if (kind === 'schedule') {
-    const result = await ElMessageBox.prompt('填写带时区的 ISO 8601 时间，未来 30 天内；例如 2026-09-26T10:00:00+05:30。每种配置类型同一时间只能有一个待发布版本。', `预约发布 ${row.version}`, {
-      inputValue: new Date(Date.now() + 3_600_000).toISOString(),
+    const result = await ElMessageBox.prompt(`填写 ${timezoneStore.timezone} 时区的本地时间（YYYY-MM-DD HH:mm:ss），须在未来 30 天内。每种配置类型同一时间只能有一个待发布版本。`, `预约发布 ${row.version}`, {
+      inputValue: utcToAdminDateTime(
+        Date.now() + 3_600_000,
+        timezoneStore.timezone,
+      ),
       inputValidator: (value) => {
-        const instant = new Date(value).getTime();
-        return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(value) && Number.isFinite(instant) && instant > Date.now() + 60_000 && instant <= Date.now() + 30 * 24 * 3_600_000 || '请输入未来 30 天内的有效时区时间';
+        try {
+          const instant = Date.parse(
+            adminDateTimeToUtc(value, timezoneStore.timezone) || '',
+          );
+          return Number.isFinite(instant) &&
+            instant > Date.now() + 60_000 &&
+            instant <= Date.now() + 30 * 24 * 3_600_000 ||
+            '请输入未来 30 天内的有效时间';
+        } catch (error) {
+          return error instanceof Error ? error.message : '日期时间无效';
+        }
       },
     });
-    await scheduleConfigVersion(row.versionId, new Date(result.value).toISOString());
+    const scheduledAt = adminDateTimeToUtc(
+      result.value,
+      timezoneStore.timezone,
+    );
+    if (!scheduledAt) return;
+    await scheduleConfigVersion(row.versionId, scheduledAt);
   } else if (kind === 'cancel_schedule') {
     await ElMessageBox.confirm(`取消版本 ${row.version} 的定时发布并恢复为已批准状态？`, '取消定时发布', { type: 'warning' });
     await cancelScheduledConfigVersion(row.versionId);

@@ -5,11 +5,29 @@ import type { CursorPage } from './app-users';
 export interface BottleRow {
   bottleId: number; ownerUserId: null | number; sourceType: string; categoryId: number;
   contentType: string; textPreview: null | string; status: string; reviewStatus: string;
-  languageCode: string; pickedCount: number; maxPickCount: number; reportCount: number;
-  createdAt: string; publishedAt: null | string;
+  aiRoleId: null | number; voiceMediaAssetId: null | number; voiceDurationMs: null | number;
+  rejectionReason: null | string; languageCode: string; adultLevel: string;
+  pickedCount: number; maxPickCount: number; conversationCount: number; reportCount: number;
+  createdAt: string; updatedAt: string; publishedAt: null | string; expiresAt: null | string;
 }
-export interface BottleDetail { bottle: BottleRow; review: null | Record<string, any>; statusLogs: Record<string, any>[] }
-export interface BottleContent { bottleId: number; contentType: string; text: null | string; voice: null | Record<string, any>; contentSource: string }
+export interface BottleDetail {
+  bottle: BottleRow;
+  declaredLanguageCode: null | string;
+  languageConfidence: null | number;
+  visibilityMode: string;
+  visibilityPreferredGenders: string[];
+  visibilityPreferredLanguages: string[];
+  review: null | Record<string, any>;
+  statusLogs: Record<string, any>[];
+}
+export interface BottleContent {
+  archivedAt: null | string;
+  bottleId: number;
+  contentSource: 'active' | 'history';
+  contentType: string;
+  text: null | string;
+  voice: null | { durationMs: null | number; mediaId: number };
+}
 
 export const listBottles = (params: Record<string, unknown>) =>
   requestClient.get<CursorPage<BottleRow>>('/bottles', { params });

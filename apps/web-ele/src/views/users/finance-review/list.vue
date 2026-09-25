@@ -11,6 +11,7 @@ import {
 } from '#/api/finance-reviews';
 import type { FinanceReviewAction, FinanceReviewActionInput, FinanceReviewCase } from '#/api/finance-reviews';
 import AdminTime from '#/components/admin-time.vue';
+import { validateReasonCode } from '#/utils/reason-code';
 
 const { hasAccessByCodes } = useAccess();
 const canManage = computed(() => hasAccessByCodes(['finance_review.manage']));
@@ -57,7 +58,7 @@ async function refreshDetail() {
 }
 async function openDetail(row: FinanceReviewCase) {
   const { value } = await ElMessageBox.prompt(`查看财务异常 #${row.caseId}，请填写审计原因`, '审计原因', {
-    inputValidator: (text) => /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(text.trim()) || '请输入有效稳定原因代码',
+    inputValidator: validateReasonCode,
   });
   detailReason.value = value.trim();
   detail.value = row;

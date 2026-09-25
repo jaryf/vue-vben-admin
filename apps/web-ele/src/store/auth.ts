@@ -44,17 +44,17 @@ export const useAuthStore = defineStore('auth', () => {
       if (accessToken) {
         // 将 accessToken 存储到 accessStore 中
         accessStore.setAccessToken(accessToken);
+        // 登录过期弹窗可能保留上一会话状态，先清空业务权限并强制重新生成路由。
+        accessStore.setAccessCodes([]);
+        accessStore.setIsAccessChecked(false);
 
-        // 获取用户信息并存储到 accessStore 中
-        const [fetchUserInfoResult, accessCodes] = await Promise.all([
-          fetchUserInfo(),
-          getAccessCodesApi(),
-        ]);
-
-        userInfo = fetchUserInfoResult;
+        // 未绑定 MFA 时只读取完成绑定所需的账号信息，不提前加载业务权限。
+        userInfo = await fetchUserInfo();
 
         userStore.setUserInfo(userInfo);
-        accessStore.setAccessCodes(accessCodes);
+        if (mfaEnabled) {
+          accessStore.setAccessCodes(await getAccessCodesApi());
+        }
 
         if (!mfaEnabled) {
           await router.push('/auth/mfa-setup');

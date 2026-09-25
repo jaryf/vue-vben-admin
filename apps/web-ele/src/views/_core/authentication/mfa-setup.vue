@@ -6,10 +6,17 @@ import { useAccessStore } from '@vben/stores';
 
 import { ElMessage } from 'element-plus';
 
-import { enableMFAApi, getMFAStatusApi, setupMFAApi } from '#/api/core/auth';
+import {
+  enableMFAApi,
+  getAccessCodesApi,
+  getMFAStatusApi,
+  setupMFAApi,
+} from '#/api/core/auth';
+import { useAuthStore } from '#/store';
 
 const router = useRouter();
 const accessStore = useAccessStore();
+const authStore = useAuthStore();
 const currentPassword = ref('');
 const totpCode = ref('');
 const secret = ref('');
@@ -23,9 +30,12 @@ onMounted(async () => {
     return;
   }
   try {
-    if ((await getMFAStatusApi()).enabled) await router.replace('/workspace');
+    if ((await getMFAStatusApi()).enabled) {
+      accessStore.setAccessCodes(await getAccessCodesApi());
+      await router.replace('/workspace');
+    }
   } catch {
-    ElMessage.error('无法读取双因素认证状态，请重试');
+    ElMessage.error('无法完成双因素认证状态检查，请重试');
   }
 });
 
@@ -59,14 +69,22 @@ async function enable() {
 }
 
 async function finish() {
+  accessStore.setAccessCodes(await getAccessCodesApi());
   recoveryCodes.value = [];
   await router.replace('/workspace');
+}
+
+async function logout() {
+  await authStore.logout(false);
 }
 </script>
 
 <template>
   <div class="mx-auto w-full max-w-xl rounded-xl bg-white p-8 shadow-lg dark:bg-gray-900">
-    <h1 class="mb-3 text-2xl font-semibold">设置双因素认证</h1>
+    <div class="mb-3 flex items-center justify-between">
+      <h1 class="text-2xl font-semibold">设置双因素认证</h1>
+      <ElButton link type="primary" @click="logout">退出登录</ElButton>
+    </div>
     <p class="mb-6 text-sm text-gray-500">管理员必须绑定验证器后才能使用总管理后台。</p>
     <template v-if="recoveryCodes.length">
       <ElAlert class="mb-5" title="请立即离线保存恢复码；关闭后将无法再次查看" type="warning" show-icon :closable="false" />

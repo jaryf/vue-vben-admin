@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
 
 import { useAccess } from '@vben/access';
+import { useTimezoneStore } from '@vben/stores';
 
 import { ElMessage, ElMessageBox } from 'element-plus';
 
@@ -11,15 +12,22 @@ import {
 } from '#/api/bottles';
 import type { BottleContent, BottleDetail, BottleRow } from '#/api/bottles';
 import AdminTime from '#/components/admin-time.vue';
+import { adminDateTimeRangeToUtc } from '#/utils/admin-datetime';
+import { validateReasonCode } from '#/utils/reason-code';
 
 const { hasAccessByCodes } = useAccess();
+const timezoneStore = useTimezoneStore();
 const canSearchContent = computed(() => hasAccessByCodes(['bottle.content.search_sensitive']));
 const canReadContent = computed(() => hasAccessByCodes(['bottle.content.read_sensitive']));
 const canReadMatches = computed(() => hasAccessByCodes(['bottle.match.read']));
 const canRemove = computed(() => hasAccessByCodes(['bottle.remove']));
 const canRestore = computed(() => hasAccessByCodes(['bottle.restore']));
 const canRetry = computed(() => hasAccessByCodes(['bottle.review.retry']));
-const filter = reactive({ bottleId: '', ownerUserId: '', status: '', reviewStatus: '', contentType: '', keyword: '' });
+const filter = reactive({
+  bottleId: '', categoryId: '', contentType: '', createdRange: [] as string[],
+  keyword: '', languageCode: '', ownerUserId: '', reviewStatus: '',
+  sourceType: '', status: '',
+});
 const rows = ref<BottleRow[]>([]);
 const nextCursor = ref<string | null>(null);
 const cursorStack = ref<string[]>([]);
@@ -38,17 +46,47 @@ const voicePreviewBusy = ref(false);
 const voicePlayer = ref<HTMLAudioElement | null>(null);
 let voiceExpiryTimer: null | number = null;
 
-const reasonPattern = /^[A-Za-z0-9][A-Za-z0-9._-]*$/;
 async function askReason(title: string): Promise<string> {
   const { value } = await ElMessageBox.prompt('请输入可审计的原因代码，例如 report_investigation', title, {
-    inputPattern: reasonPattern, inputErrorMessage: '原因代码只能包含字母、数字、点、下划线和横线',
+    inputValidator: validateReasonCode,
   });
   return value.trim();
 }
 
+const sourceLabels: Record<string, string> = {
+  ai_generated: 'AI 生成',
+  operator_created: '运营创建',
+  user: '用户发布',
+};
+const bottleStatuses = [
+  ['draft', '草稿'], ['uploading', '上传中'],
+  ['pending_review', '待审核'], ['manual_review', '人工审核'],
+  ['approved', '已通过'], ['distributing', '分发中'],
+  ['partially_picked', '部分拾取'], ['conversation_created', '已创建会话'],
+  ['expired', '已过期'], ['archived', '已归档'],
+  ['rejected', '已拒绝'], ['user_deleted', '用户已删除'],
+  ['admin_removed', '管理员下架'],
+];
+const reviewStatuses = [
+  ['not_submitted', '未提交'], ['pending', '待审核'],
+  ['manual_review', '人工审核'], ['approved', '已通过'],
+  ['rejected', '已拒绝'],
+];
+const sourceText = (value: string) => sourceLabels[value] || value;
+const statusText = (value: string) =>
+  bottleStatuses.find(([code]) => code === value)?.[1] || value;
+const reviewStatusText = (value: string) =>
+  reviewStatuses.find(([code]) => code === value)?.[1] || value;
+const durationText = (value: null | number) =>
+  value === null ? '—' : `${(value / 1000).toFixed(1)} 秒`;
+
 async function load(cursor = '') {
   loading.value = true;
   try {
+    const createdRange = adminDateTimeRangeToUtc(
+      filter.createdRange,
+      timezoneStore.timezone,
+    );
     const result = await listBottles({
       limit: 20, cursor: cursor || undefined,
       bottleId: filter.bottleId.trim() || undefined,
@@ -56,8 +94,13 @@ async function load(cursor = '') {
       status: filter.status || undefined,
       reviewStatus: filter.reviewStatus || undefined,
       contentType: filter.contentType || undefined,
+      sourceType: filter.sourceType || undefined,
+      categoryId: filter.categoryId.trim() || undefined,
+      languageCode: filter.languageCode.trim().toLowerCase() || undefined,
       keyword: filter.keyword.trim() || undefined,
       reasonCode: filter.keyword.trim() ? searchReason.value : undefined,
+      createdFrom: createdRange?.[0],
+      createdUntil: createdRange?.[1],
     });
     rows.value = result.items || [];
     nextCursor.value = result.nextCursor;
@@ -65,6 +108,19 @@ async function load(cursor = '') {
 }
 
 async function search() {
+  if (
+    filter.categoryId.trim() &&
+    !/^[1-9]\d*$/.test(filter.categoryId.trim())
+  ) {
+    ElMessage.error('分类 ID 必须为正整数');
+    return;
+  }
+  try {
+    adminDateTimeRangeToUtc(filter.createdRange, timezoneStore.timezone);
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '创建时间范围无效');
+    return;
+  }
   if (filter.keyword.trim()) {
     if (!canSearchContent.value) { ElMessage.error('没有正文搜索权限'); return; }
     searchReason.value = await askReason('正文敏感搜索');
@@ -177,20 +233,31 @@ onBeforeUnmount(clearVoicePreview);
       <div class="mb-4 flex flex-wrap gap-3">
         <ElInput v-model="filter.bottleId" placeholder="漂流瓶 ID" clearable class="!w-36" />
         <ElInput v-model="filter.ownerUserId" placeholder="发布者 ID" clearable class="!w-36" />
-        <ElSelect v-model="filter.status" clearable placeholder="全部状态" class="!w-44"><ElOption label="待审核" value="pending_review" /><ElOption label="人工审核" value="manual_review" /><ElOption label="已通过" value="approved" /><ElOption label="分发中" value="distributing" /><ElOption label="管理员下架" value="admin_removed" /><ElOption label="已拒绝" value="rejected" /></ElSelect>
+        <ElSelect v-model="filter.status" clearable placeholder="全部状态" class="!w-44"><ElOption v-for="[value, label] in bottleStatuses" :key="value" :label="label" :value="value" /></ElSelect>
+        <ElSelect v-model="filter.reviewStatus" clearable placeholder="全部审核状态" class="!w-40"><ElOption v-for="[value, label] in reviewStatuses" :key="value" :label="label" :value="value" /></ElSelect>
+        <ElSelect v-model="filter.sourceType" clearable placeholder="全部来源" class="!w-36"><ElOption label="用户发布" value="user" /><ElOption label="AI 生成" value="ai_generated" /><ElOption label="运营创建" value="operator_created" /></ElSelect>
         <ElSelect v-model="filter.contentType" clearable placeholder="全部内容类型" class="!w-36"><ElOption label="文字" value="text" /><ElOption label="语音" value="voice" /></ElSelect>
+        <ElInput v-model="filter.categoryId" placeholder="分类 ID" clearable class="!w-32" />
+        <ElInput v-model="filter.languageCode" placeholder="语言代码" maxlength="16" clearable class="!w-32" />
+        <ElDatePicker v-model="filter.createdRange" type="datetimerange" value-format="YYYY-MM-DD HH:mm:ss" range-separator="至" start-placeholder="创建开始" end-placeholder="创建结束" class="!w-[390px]" />
         <ElInput v-if="canSearchContent" v-model="filter.keyword" placeholder="正文关键词（需审计）" clearable class="!w-56" @keyup.enter="search" />
         <ElButton @click="search">查询</ElButton>
       </div>
       <ElTable v-loading="loading" :data="rows" row-key="bottleId" class="w-full">
         <ElTableColumn prop="bottleId" label="漂流瓶 ID" width="110" />
         <ElTableColumn prop="ownerUserId" label="发布者 ID" width="110" />
+        <ElTableColumn label="来源" width="105"><template #default="{ row }">{{ sourceText(row.sourceType) }}</template></ElTableColumn>
+        <ElTableColumn prop="categoryId" label="分类 ID" width="90" />
         <ElTableColumn prop="textPreview" label="内容摘要" min-width="200" show-overflow-tooltip />
         <ElTableColumn label="类型" width="80"><template #default="{ row }">{{ row.contentType === 'text' ? '文字' : '语音' }}</template></ElTableColumn>
         <ElTableColumn prop="languageCode" label="语言" width="85" />
-        <ElTableColumn prop="status" label="状态" min-width="130" />
-        <ElTableColumn prop="reviewStatus" label="审核状态" min-width="110" />
+        <ElTableColumn label="状态" min-width="130"><template #default="{ row }">{{ statusText(row.status) }}</template></ElTableColumn>
+        <ElTableColumn label="审核状态" min-width="110"><template #default="{ row }">{{ reviewStatusText(row.reviewStatus) }}</template></ElTableColumn>
+        <ElTableColumn label="语音时长" width="100"><template #default="{ row }">{{ durationText(row.voiceDurationMs) }}</template></ElTableColumn>
+        <ElTableColumn label="拾取/上限" width="105"><template #default="{ row }">{{ row.pickedCount }} / {{ row.maxPickCount }}</template></ElTableColumn>
+        <ElTableColumn prop="conversationCount" label="会话数" width="85" />
         <ElTableColumn prop="reportCount" label="举报数" width="85" />
+        <ElTableColumn prop="expiresAt" label="过期时间" min-width="170"><template #default="{ row }"><AdminTime :value="row.expiresAt" /></template></ElTableColumn>
         <ElTableColumn prop="createdAt" label="创建时间" min-width="170"><template #default="{ row }"><AdminTime :value="row.createdAt" /></template></ElTableColumn>
         <ElTableColumn label="操作" width="85" fixed="right"><template #default="{ row }"><ElButton link type="primary" @click="openDetail(row.bottleId)">详情</ElButton></template></ElTableColumn>
       </ElTable>
@@ -209,17 +276,19 @@ onBeforeUnmount(clearVoicePreview);
         </div>
         <ElTabs v-model="detailTab">
           <ElTabPane label="元数据" name="metadata">
-            <ElDescriptions :column="2" border><ElDescriptionsItem label="发布者">{{ detail.bottle.ownerUserId || '匿名' }}</ElDescriptionsItem><ElDescriptionsItem label="来源">{{ detail.bottle.sourceType }}</ElDescriptionsItem><ElDescriptionsItem label="状态">{{ detail.bottle.status }}</ElDescriptionsItem><ElDescriptionsItem label="审核">{{ detail.bottle.reviewStatus }}</ElDescriptionsItem><ElDescriptionsItem label="分类 ID">{{ detail.bottle.categoryId }}</ElDescriptionsItem><ElDescriptionsItem label="已获取/上限">{{ detail.bottle.pickedCount }} / {{ detail.bottle.maxPickCount }}</ElDescriptionsItem></ElDescriptions>
+            <ElDescriptions :column="2" border><ElDescriptionsItem label="发布者">{{ detail.bottle.ownerUserId || '匿名' }}</ElDescriptionsItem><ElDescriptionsItem label="来源">{{ sourceText(detail.bottle.sourceType) }}</ElDescriptionsItem><ElDescriptionsItem label="状态">{{ statusText(detail.bottle.status) }}</ElDescriptionsItem><ElDescriptionsItem label="审核">{{ reviewStatusText(detail.bottle.reviewStatus) }}</ElDescriptionsItem><ElDescriptionsItem label="分类 ID">{{ detail.bottle.categoryId }}</ElDescriptionsItem><ElDescriptionsItem label="语言">{{ detail.bottle.languageCode }}</ElDescriptionsItem><ElDescriptionsItem label="语音时长">{{ durationText(detail.bottle.voiceDurationMs) }}</ElDescriptionsItem><ElDescriptionsItem label="已获取/上限">{{ detail.bottle.pickedCount }} / {{ detail.bottle.maxPickCount }}</ElDescriptionsItem><ElDescriptionsItem label="会话 / 举报">{{ detail.bottle.conversationCount }} / {{ detail.bottle.reportCount }}</ElDescriptionsItem><ElDescriptionsItem label="过期时间"><AdminTime :value="detail.bottle.expiresAt" /></ElDescriptionsItem></ElDescriptions>
             <ElDivider>状态记录</ElDivider><ElTable :data="detail.statusLogs"><ElTableColumn prop="fromStatus" label="原状态" /><ElTableColumn prop="toStatus" label="新状态" /><ElTableColumn prop="reasonCode" label="原因" /><ElTableColumn prop="createdAt" label="时间"><template #default="{ row }"><AdminTime :value="row.createdAt" /></template></ElTableColumn></ElTable>
           </ElTabPane>
           <ElTabPane v-if="content" label="受控内容" name="content">
             <ElAlert title="敏感内容已记录查看原因与审计，离开详情后不再保留在页面。" type="warning" show-icon :closable="false" class="mb-4" />
+            <ElAlert class="mb-4" :type="content.contentSource === 'history' ? 'warning' : 'info'" show-icon :closable="false" :title="content.contentSource === 'history' ? '内容来自历史快照，不是当前活动表记录。' : '内容来自当前活动表记录。'" />
+            <p v-if="content.archivedAt" class="mb-4 text-sm text-gray-500">归档时间：<AdminTime :value="content.archivedAt" /></p>
             <div v-if="content.contentType === 'text'" class="whitespace-pre-wrap rounded border p-4">{{ content.text || '—' }}</div>
             <template v-else>
               <ElDescriptions :column="1" border>
                 <ElDescriptionsItem label="语音媒体 ID">{{ content.voice?.mediaId || '—' }}</ElDescriptionsItem>
-                <ElDescriptionsItem label="时长（毫秒）">{{ content.voice?.durationMs || '—' }}</ElDescriptionsItem>
-                <ElDescriptionsItem label="转写">服务未接通，当前不可用</ElDescriptionsItem>
+                <ElDescriptionsItem label="时长（毫秒）">{{ content.voice?.durationMs ?? '—' }}</ElDescriptionsItem>
+                <ElDescriptionsItem label="转写"><ElTag type="info">能力未接通</ElTag><span class="ml-2">当前无语音转写文本</span></ElDescriptionsItem>
               </ElDescriptions>
               <ElButton v-if="content.voice?.mediaId" class="mt-4" type="primary" :loading="voicePreviewBusy" @click="previewVoice">填写原因并播放</ElButton>
               <audio v-if="voicePreviewURL" ref="voicePlayer" class="mt-4 w-full" :src="voicePreviewURL" controls controlslist="nodownload noplaybackrate" preload="none" @contextmenu.prevent />

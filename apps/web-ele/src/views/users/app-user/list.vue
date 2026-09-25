@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 
 import { useAccess } from '@vben/access';
+import { useTimezoneStore } from '@vben/stores';
 
 import { ElMessage, ElMessageBox } from 'element-plus';
 
@@ -20,8 +21,11 @@ import { listConversations } from '#/api/conversations';
 import { listRiskEvents } from '#/api/risk-events';
 import { listReports } from '#/api/safety-cases';
 import AdminTime from '#/components/admin-time.vue';
+import { adminDateTimeRangeToUtc } from '#/utils/admin-datetime';
+import { isValidReasonCode, validateReasonCode } from '#/utils/reason-code';
 
 const { hasAccessByCodes } = useAccess();
+const timezoneStore = useTimezoneStore();
 const canRevoke = computed(() => hasAccessByCodes(['account_user.session.revoke']));
 const canStatus = computed(() => hasAccessByCodes(['account_user.status.update']));
 const canUpdateBirthDate = computed(() => hasAccessByCodes(['account_user.birth_date.update']));
@@ -35,8 +39,8 @@ const canReadReports = computed(() => hasAccessByCodes(['report.read']));
 const canReadRisk = computed(() => hasAccessByCodes(['risk_event.read']));
 const canReadActivity = computed(() => canReadBottles.value || canReadConversations.value || canReadReports.value || canReadRisk.value);
 const filters = reactive({ userId: '', nickname: '', status: '', countryCode: '', interfaceLanguage: '', bindingMethod: '', vipStatus: '' });
-const registeredRange = ref<Date[] | null>(null);
-const activeRange = ref<Date[] | null>(null);
+const registeredRange = ref<string[] | null>(null);
+const activeRange = ref<string[] | null>(null);
 const rows = ref<AppUserRow[]>([]);
 const nextCursor = ref<string | null>(null);
 const cursorStack = ref<string[]>([]);
@@ -85,6 +89,14 @@ const statusLabel = (value: string) => statusLabels[value] || value;
 async function load(cursor = '') {
   loading.value = true;
   try {
+    const registeredUtc = adminDateTimeRangeToUtc(
+      registeredRange.value,
+      timezoneStore.timezone,
+    );
+    const activeUtc = adminDateTimeRangeToUtc(
+      activeRange.value,
+      timezoneStore.timezone,
+    );
     const result = await listAppUsers({
       limit: 20, cursor: cursor || undefined,
       userId: filters.userId.trim() || undefined,
@@ -94,17 +106,27 @@ async function load(cursor = '') {
       interfaceLanguage: filters.interfaceLanguage.trim().toLowerCase() || undefined,
       bindingMethod: filters.bindingMethod || undefined,
       vipStatus: filters.vipStatus || undefined,
-      registeredFrom: registeredRange.value?.[0]?.toISOString(),
-      registeredUntil: registeredRange.value?.[1]?.toISOString(),
-      lastActiveFrom: activeRange.value?.[0]?.toISOString(),
-      lastActiveUntil: activeRange.value?.[1]?.toISOString(),
+      registeredFrom: registeredUtc?.[0],
+      registeredUntil: registeredUtc?.[1],
+      lastActiveFrom: activeUtc?.[0],
+      lastActiveUntil: activeUtc?.[1],
     });
     rows.value = result.items || [];
     nextCursor.value = result.nextCursor;
   } finally { loading.value = false; }
 }
 
-function search() { cursorStack.value = []; void load(); }
+function search() {
+  try {
+    adminDateTimeRangeToUtc(registeredRange.value, timezoneStore.timezone);
+    adminDateTimeRangeToUtc(activeRange.value, timezoneStore.timezone);
+  } catch (error) {
+    ElMessage.error(error instanceof Error ? error.message : '时间范围无效');
+    return;
+  }
+  cursorStack.value = [];
+  void load();
+}
 function next() {
   if (!nextCursor.value) return;
   cursorStack.value.push(nextCursor.value);
@@ -198,16 +220,16 @@ async function refreshDetail() {
 
 async function revokeAll() {
   if (!detailUserId.value) return;
-  const { value } = await ElMessageBox.prompt('请输入操作原因代码，例如 security_incident', '强制退出全部会话', { inputPattern: /^[A-Za-z0-9][A-Za-z0-9._-]*$/, inputErrorMessage: '原因代码格式不正确' });
-  await revokeAppUserSessions(detailUserId.value, value);
+  const { value } = await ElMessageBox.prompt('请输入操作原因代码，例如 security_incident', '强制退出全部会话', { inputValidator: validateReasonCode });
+  await revokeAppUserSessions(detailUserId.value, value.trim());
   ElMessage.success('已撤销该用户的全部会话');
   await refreshDetail();
 }
 
 async function revokeOne(sessionId: number) {
   if (!detailUserId.value) return;
-  const { value } = await ElMessageBox.prompt('请输入操作原因代码', '撤销会话', { inputPattern: /^[A-Za-z0-9][A-Za-z0-9._-]*$/, inputErrorMessage: '原因代码格式不正确' });
-  await revokeAppUserSession(detailUserId.value, sessionId, value);
+  const { value } = await ElMessageBox.prompt('请输入操作原因代码', '撤销会话', { inputValidator: validateReasonCode });
+  await revokeAppUserSession(detailUserId.value, sessionId, value.trim());
   ElMessage.success('会话已撤销');
   await refreshDetail();
 }
@@ -220,23 +242,24 @@ function openAction(kind: 'birth-date' | 'entitlement' | 'quota' | 'status') {
 }
 
 async function submitAction() {
-  if (!detailUserId.value || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(actionForm.reasonCode)) {
+  if (!detailUserId.value || !isValidReasonCode(actionForm.reasonCode)) {
     ElMessage.error('请输入有效的原因代码'); return;
   }
   saving.value = true;
   try {
+    const reasonCode = actionForm.reasonCode.trim();
     if (action.value === 'status') {
-      await updateAppUserStatus(detailUserId.value, actionForm.status, actionForm.reasonCode);
+      await updateAppUserStatus(detailUserId.value, actionForm.status, reasonCode);
     } else if (action.value === 'birth-date') {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(actionForm.birthDate)) {
         ElMessage.error('请选择有效的出生日期'); return;
       }
-      await updateAppUserBirthDate(detailUserId.value, actionForm.birthDate, actionForm.reasonCode);
+      await updateAppUserBirthDate(detailUserId.value, actionForm.birthDate, reasonCode);
     } else if (action.value === 'quota') {
       if (!Number.isInteger(actionForm.amount) || actionForm.amount === 0) { ElMessage.error('调整数量必须是非零整数'); return; }
       await adjustAppUserQuota(detailUserId.value, {
         quotaType: actionForm.quotaType, amount: actionForm.amount,
-        reasonCode: actionForm.reasonCode, note: actionForm.note || null,
+        reasonCode, note: actionForm.note || null,
       }, actionKey.value);
     } else {
       if (!actionForm.entitlementType.trim() || !Number.isInteger(actionForm.amount) || actionForm.amount < 1) {
@@ -244,7 +267,7 @@ async function submitAction() {
       }
       await adjustAppUserEntitlement(detailUserId.value, {
         entitlementType: actionForm.entitlementType.trim(), amount: actionForm.amount,
-        reasonCode: actionForm.reasonCode, note: actionForm.note || null,
+        reasonCode, note: actionForm.note || null,
       }, actionKey.value);
     }
     actionOpen.value = false;
@@ -287,13 +310,13 @@ async function openReview(id: number) {
 }
 
 async function submitReview() {
-  if (!reviewTarget.value || !/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(reviewForm.reasonCode)) {
+  if (!reviewTarget.value || !isValidReasonCode(reviewForm.reasonCode)) {
     ElMessage.error('请输入有效的复核原因代码'); return;
   }
   saving.value = true;
   try {
     await reviewDeletionRequest(reviewTarget.value.requestId, {
-      decision: reviewForm.decision, reasonCode: reviewForm.reasonCode,
+      decision: reviewForm.decision, reasonCode: reviewForm.reasonCode.trim(),
       note: reviewForm.note.trim() || null,
     });
     reviewOpen.value = false;
@@ -318,8 +341,8 @@ onMounted(() => { void load(); });
         <ElInput v-model="filters.interfaceLanguage" placeholder="界面语言" maxlength="16" clearable class="!w-32" @keyup.enter="search" />
         <ElSelect v-model="filters.bindingMethod" clearable placeholder="已绑定方式" class="!w-40"><ElOption label="邮箱密码" value="email" /><ElOption label="Google" value="google" /><ElOption label="Apple" value="apple" /></ElSelect>
         <ElSelect v-model="filters.vipStatus" clearable placeholder="全部 VIP 状态" class="!w-40"><ElOption label="VIP 有效" value="active" /><ElOption label="非 VIP" value="inactive" /></ElSelect>
-        <ElDatePicker v-model="registeredRange" type="datetimerange" start-placeholder="注册开始" end-placeholder="注册结束" class="!w-[350px]" />
-        <ElDatePicker v-model="activeRange" type="datetimerange" start-placeholder="活跃开始" end-placeholder="活跃结束" class="!w-[350px]" />
+        <ElDatePicker v-model="registeredRange" type="datetimerange" value-format="YYYY-MM-DD HH:mm:ss" start-placeholder="注册开始" end-placeholder="注册结束" class="!w-[350px]" />
+        <ElDatePicker v-model="activeRange" type="datetimerange" value-format="YYYY-MM-DD HH:mm:ss" start-placeholder="活跃开始" end-placeholder="活跃结束" class="!w-[350px]" />
         <ElButton @click="search">查询</ElButton>
       </div>
       <ElTable v-loading="loading" :data="rows" row-key="userId" class="w-full">
@@ -414,7 +437,7 @@ onMounted(() => { void load(); });
         <ElFormItem v-if="action === 'quota'" label="额度类型"><ElSelect v-model="actionForm.quotaType" class="w-full"><ElOption label="投放漂流瓶" value="bottle_send" /><ElOption label="获取漂流瓶" value="bottle_pick" /></ElSelect></ElFormItem>
         <ElFormItem v-if="action === 'entitlement'" label="权益类型"><ElInput v-model="actionForm.entitlementType" placeholder="输入已配置的权益类型代码" /></ElFormItem>
         <ElFormItem v-if="action === 'quota' || action === 'entitlement'" :label="action === 'quota' ? '调整数量（负数为扣减）' : '补发数量（仅正数）'"><ElInputNumber v-model="actionForm.amount" :min="action === 'quota' ? -10000 : 1" :max="10000" /></ElFormItem>
-        <ElFormItem label="原因代码"><ElInput v-model="actionForm.reasonCode" placeholder="例如 support_correction" /></ElFormItem>
+        <ElFormItem label="原因代码"><ElInput v-model="actionForm.reasonCode" maxlength="64" show-word-limit placeholder="例如 support_correction" /></ElFormItem>
         <ElFormItem v-if="action === 'quota' || action === 'entitlement'" label="备注"><ElInput v-model="actionForm.note" type="textarea" /></ElFormItem>
       </ElForm>
       <template #footer><ElButton @click="actionOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="submitAction">确认</ElButton></template>
@@ -445,7 +468,7 @@ onMounted(() => { void load(); });
       <ElDescriptions v-if="reviewTarget" :column="1" border class="mb-4"><ElDescriptionsItem label="用户 ID">{{ reviewTarget.userId }}</ElDescriptionsItem><ElDescriptionsItem label="申请原因">{{ reviewTarget.reasonCode }}</ElDescriptionsItem><ElDescriptionsItem label="原因补充">{{ reviewTarget.reasonText || '—' }}</ElDescriptionsItem><ElDescriptionsItem label="计划注销"><AdminTime :value="reviewTarget.scheduledFor" /></ElDescriptionsItem></ElDescriptions>
       <ElForm label-position="top" @submit.prevent="submitReview">
         <ElFormItem label="复核结论"><ElRadioGroup v-model="reviewForm.decision"><ElRadio value="approve">通过</ElRadio><ElRadio value="reject">驳回</ElRadio></ElRadioGroup></ElFormItem>
-        <ElFormItem label="原因代码"><ElInput v-model="reviewForm.reasonCode" placeholder="例如 support_verified" /></ElFormItem>
+        <ElFormItem label="原因代码"><ElInput v-model="reviewForm.reasonCode" maxlength="64" show-word-limit placeholder="例如 support_verified" /></ElFormItem>
         <ElFormItem label="备注"><ElInput v-model="reviewForm.note" type="textarea" maxlength="1000" show-word-limit /></ElFormItem>
       </ElForm>
       <template #footer><ElButton @click="reviewOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="submitReview">提交复核</ElButton></template>

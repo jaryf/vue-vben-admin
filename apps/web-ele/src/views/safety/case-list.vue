@@ -2,6 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue';
 
 import { useAccess } from '@vben/access';
+import { useTimezoneStore } from '@vben/stores';
 
 import { ElMessage, ElMessageBox } from 'element-plus';
 
@@ -11,9 +12,12 @@ import {
 } from '#/api/safety-cases';
 import type { AppealCase, AppealDetail, ReportCase, ReportDetail } from '#/api/safety-cases';
 import AdminTime from '#/components/admin-time.vue';
+import { adminDateTimeRangeToUtc } from '#/utils/admin-datetime';
+import { isValidReasonCode, validateReasonCode } from '#/utils/reason-code';
 
 const props = defineProps<{ kind: 'appeal' | 'report' }>();
 const { hasAccessByCodes } = useAccess();
+const timezoneStore = useTimezoneStore();
 const isReport = computed(() => props.kind === 'report');
 const canEvidence = computed(() => hasAccessByCodes([isReport.value ? 'report.evidence.read_sensitive' : 'appeal.evidence.read_sensitive']));
 const canAssign = computed(() => isReport.value && hasAccessByCodes(['report.assign']));
@@ -28,7 +32,7 @@ const detail = ref<AppealDetail | ReportDetail | null>(null);
 const assignOpen = ref(false);
 const resolving = ref<AppealCase | ReportCase | null>(null);
 const resolveOpen = ref(false);
-const filter = reactive({ status: '', priority: '', targetType: '', userId: '', assignedAdminId: '', createdRange: [] as Date[] });
+const filter = reactive({ status: '', priority: '', targetType: '', userId: '', assignedAdminId: '', createdRange: [] as string[] });
 const appliedFilter = ref<Record<string, unknown>>({});
 const assignment = reactive({ reportId: 0, assignedAdminId: 0, priority: 'normal' });
 const resolution = reactive({ decision: '', resolutionCode: '' });
@@ -44,7 +48,6 @@ const statusLabels: Record<string, string> = {
   resolved_approved: '申诉通过', resolved_rejected: '申诉驳回',
 };
 const statusText = (value: string) => statusLabels[value] || value;
-const stableCode = (value: string) => /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(value);
 
 async function load(cursor = '') {
   loading.value = true;
@@ -56,8 +59,15 @@ async function load(cursor = '') {
   } finally { loading.value = false; }
 }
 function search() {
-  if (filter.createdRange?.length === 2 && filter.createdRange[0]!.getTime() >= filter.createdRange[1]!.getTime()) {
-    ElMessage.warning('结束时间必须晚于开始时间'); return;
+  let createdRange: [string, string] | undefined;
+  try {
+    createdRange = adminDateTimeRangeToUtc(
+      filter.createdRange,
+      timezoneStore.timezone,
+    );
+  } catch (error) {
+    ElMessage.warning(error instanceof Error ? error.message : '提交时间范围无效');
+    return;
   }
   appliedFilter.value = {
     status: filter.status || undefined,
@@ -65,8 +75,8 @@ function search() {
     targetType: filter.targetType || undefined,
     [isReport.value ? 'reporterUserId' : 'appellantUserId']: filter.userId || undefined,
     assignedAdminId: filter.assignedAdminId || undefined,
-    createdFrom: filter.createdRange?.[0]?.toISOString(),
-    createdUntil: filter.createdRange?.[1]?.toISOString(),
+    createdFrom: createdRange?.[0],
+    createdUntil: createdRange?.[1],
   };
   cursorStack.value = [];
   void load();
@@ -76,7 +86,7 @@ function previous() { cursorStack.value.pop(); void load(cursorStack.value.at(-1
 
 async function openDetail(row: AppealCase | ReportCase) {
   const { value } = await ElMessageBox.prompt('请输入本次查看的审计原因代码', '敏感证据查看', {
-    inputValidator: (text) => stableCode(text.trim()) || '请输入 1–64 位字母数字及 ._- 组成的代码',
+    inputValidator: validateReasonCode,
   });
   detail.value = isReport.value
     ? await getReport((row as ReportCase).reportId, value.trim())
@@ -101,7 +111,7 @@ function openResolve(row: AppealCase | ReportCase) {
   resolveOpen.value = true;
 }
 async function saveResolve() {
-  if (!resolving.value || !resolution.decision || !stableCode(resolution.resolutionCode.trim())) {
+  if (!resolving.value || !resolution.decision || !isValidReasonCode(resolution.resolutionCode)) {
     ElMessage.error('请选择决策并填写有效处理原因代码'); return;
   }
   saving.value = true;
@@ -126,7 +136,7 @@ onMounted(search);
         <ElSelect v-if="isReport" v-model="filter.priority" clearable placeholder="全部优先级" class="!w-36"><ElOption v-for="[value, label] in priorities" :key="value" :label="label" :value="value" /></ElSelect>
         <ElInput v-model="filter.userId" :placeholder="isReport ? '举报人 ID' : '申诉人 ID'" clearable class="!w-36" />
         <ElInput v-model="filter.assignedAdminId" placeholder="分派管理员 ID" clearable class="!w-40" />
-        <ElDatePicker v-model="filter.createdRange" type="datetimerange" range-separator="至" start-placeholder="提交开始" end-placeholder="提交结束" class="!w-[390px]" />
+        <ElDatePicker v-model="filter.createdRange" type="datetimerange" value-format="YYYY-MM-DD HH:mm:ss" range-separator="至" start-placeholder="提交开始" end-placeholder="提交结束" class="!w-[390px]" />
         <ElButton @click="search">查询</ElButton>
       </div>
       <ElTable v-loading="loading" :data="rows" :row-key="isReport ? 'reportId' : 'appealId'">
@@ -145,6 +155,6 @@ onMounted(search);
       <template v-if="detail"><ElDescriptions :column="1" border><ElDescriptionsItem label="案件 ID">{{ 'report' in detail ? detail.report.reportId : detail.appeal.appealId }}</ElDescriptionsItem><ElDescriptionsItem label="状态">{{ statusText('report' in detail ? detail.report.status : detail.appeal.status) }}</ElDescriptionsItem><ElDescriptionsItem label="描述">{{ 'report' in detail ? detail.report.description || '—' : detail.description || '—' }}</ElDescriptionsItem></ElDescriptions><template v-if="'report' in detail"><ElDivider>保留中的证据快照</ElDivider><ElTable :data="detail.evidence"><ElTableColumn prop="evidenceId" label="证据 ID" width="100" /><ElTableColumn prop="evidenceType" label="类型" width="120" /><ElTableColumn label="快照" min-width="260"><template #default="{ row }"><pre class="whitespace-pre-wrap break-all">{{ snapshotText(row.snapshot) }}</pre></template></ElTableColumn><ElTableColumn prop="retentionUntil" label="保留至" width="170"><template #default="{ row }"><AdminTime :value="row.retentionUntil" /></template></ElTableColumn></ElTable></template><template v-else><ElDivider>证据媒体 ID</ElDivider><div>{{ detail.evidenceMediaIds.join('、') || '无' }}</div></template></template>
     </ElDrawer>
     <ElDialog v-model="assignOpen" title="分派举报" width="500px"><ElForm label-width="120px"><ElFormItem label="管理员 ID"><ElInputNumber v-model="assignment.assignedAdminId" :min="1" /></ElFormItem><ElFormItem label="优先级"><ElSelect v-model="assignment.priority"><ElOption label="低" value="low" /><ElOption label="普通" value="normal" /><ElOption label="高" value="high" /><ElOption label="紧急" value="urgent" /></ElSelect></ElFormItem></ElForm><template #footer><ElButton @click="assignOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="saveAssign">分派</ElButton></template></ElDialog>
-    <ElDialog v-model="resolveOpen" :title="isReport ? '处理举报' : '处理申诉'" width="500px"><ElForm label-width="120px"><ElFormItem label="处理决策"><ElSelect v-model="resolution.decision" placeholder="请选择"><template v-if="isReport"><ElOption label="属实" value="valid" /><ElOption label="不成立" value="invalid" /><ElOption label="重复案件" value="duplicate" /></template><template v-else><ElOption label="通过" value="approve" /><ElOption label="驳回" value="reject" /><ElOption label="重复案件" value="duplicate" /></template></ElSelect></ElFormItem><ElFormItem label="原因代码"><ElInput v-model="resolution.resolutionCode" placeholder="稳定原因代码，1–64 位" /></ElFormItem></ElForm><template #footer><ElButton @click="resolveOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="saveResolve">确认处理</ElButton></template></ElDialog>
+    <ElDialog v-model="resolveOpen" :title="isReport ? '处理举报' : '处理申诉'" width="500px"><ElForm label-width="120px"><ElFormItem label="处理决策"><ElSelect v-model="resolution.decision" placeholder="请选择"><template v-if="isReport"><ElOption label="属实" value="valid" /><ElOption label="不成立" value="invalid" /><ElOption label="重复案件" value="duplicate" /></template><template v-else><ElOption label="通过" value="approve" /><ElOption label="驳回" value="reject" /><ElOption label="重复案件" value="duplicate" /></template></ElSelect></ElFormItem><ElFormItem label="原因代码"><ElInput v-model="resolution.resolutionCode" maxlength="64" show-word-limit placeholder="稳定原因代码，1–64 位" /></ElFormItem></ElForm><template #footer><ElButton @click="resolveOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="saveResolve">确认处理</ElButton></template></ElDialog>
   </div>
 </template>

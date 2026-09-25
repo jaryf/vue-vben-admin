@@ -1,17 +1,22 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue';
 
+import { useTimezoneStore } from '@vben/stores';
+
 import { ElMessage } from 'element-plus';
 
 import { requestClient } from '#/api/request';
 import AdminTime from '#/components/admin-time.vue';
+import { adminDateTimeRangeToUtc } from '#/utils/admin-datetime';
+
+const timezoneStore = useTimezoneStore();
 
 interface AuditLog {
   id: number; userId: null | number; username: string; method: string; path: string;
   ip: string; userAgent: string; requestBody: string; responseBody: string;
   statusCode: number; errorMessage: string; latency: number; createdAt: string;
 }
-const filter = reactive({ username: '', method: '', path: '', statusCode: '', occurredRange: [] as Date[], sortBy: 'createdAt', sortOrder: 'desc' });
+const filter = reactive({ username: '', method: '', path: '', statusCode: '', occurredRange: [] as string[], sortBy: 'createdAt', sortOrder: 'desc' });
 const appliedFilter = ref<Record<string, unknown>>({});
 const rows = ref<AuditLog[]>([]);
 const total = ref(0);
@@ -33,8 +38,15 @@ async function load() {
 }
 
 function search() {
-  if (filter.occurredRange?.length === 2 && filter.occurredRange[0]!.getTime() >= filter.occurredRange[1]!.getTime()) {
-    ElMessage.warning('结束时间必须晚于开始时间'); return;
+  let occurredRange: [string, string] | undefined;
+  try {
+    occurredRange = adminDateTimeRangeToUtc(
+      filter.occurredRange,
+      timezoneStore.timezone,
+    );
+  } catch (error) {
+    ElMessage.warning(error instanceof Error ? error.message : '发生时间范围无效');
+    return;
   }
   const statusCode = filter.statusCode.trim();
   if (statusCode && !/^[1-5]\d\d$/.test(statusCode)) { ElMessage.warning('请输入 100～599 的状态码'); return; }
@@ -43,8 +55,8 @@ function search() {
     method: filter.method || undefined,
     path: filter.path.trim() || undefined,
     statusCode: statusCode || undefined,
-    startTime: filter.occurredRange?.[0]?.toISOString(),
-    endTime: filter.occurredRange?.[1]?.toISOString(),
+    startTime: occurredRange?.[0],
+    endTime: occurredRange?.[1],
     sortBy: filter.sortBy,
     sortOrder: filter.sortOrder,
   };
@@ -67,7 +79,7 @@ onMounted(search);
         <ElSelect v-model="filter.method" clearable placeholder="请求方法" class="!w-32"><ElOption v-for="method in ['GET', 'POST', 'PUT', 'PATCH', 'DELETE']" :key="method" :label="method" :value="method" /></ElSelect>
         <ElInput v-model="filter.path" placeholder="接口路径" clearable class="!w-48" />
         <ElInput v-model="filter.statusCode" placeholder="状态码" clearable class="!w-28" />
-        <ElDatePicker v-model="filter.occurredRange" type="datetimerange" range-separator="至" start-placeholder="发生开始" end-placeholder="发生结束" class="!w-[390px]" />
+        <ElDatePicker v-model="filter.occurredRange" type="datetimerange" value-format="YYYY-MM-DD HH:mm:ss" range-separator="至" start-placeholder="发生开始" end-placeholder="发生结束" class="!w-[390px]" />
         <ElSelect v-model="filter.sortBy" placeholder="排序字段" class="!w-36"><ElOption label="发生时间" value="createdAt" /><ElOption label="管理员" value="username" /><ElOption label="请求方法" value="method" /><ElOption label="接口路径" value="path" /><ElOption label="状态码" value="statusCode" /><ElOption label="耗时" value="latency" /></ElSelect>
         <ElSelect v-model="filter.sortOrder" placeholder="排序方向" class="!w-28"><ElOption label="降序" value="desc" /><ElOption label="升序" value="asc" /></ElSelect>
         <ElButton @click="search">查询</ElButton>
