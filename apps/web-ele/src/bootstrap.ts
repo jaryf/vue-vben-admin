@@ -17,6 +17,8 @@ import { initSetupVbenForm } from './adapter/form';
 import App from './app.vue';
 import { router } from './router';
 
+import '#/styles/admin.css';
+
 async function bootstrap(namespace: string) {
   setTimezoneHandler({
     getTimezoneOptions: async () => [

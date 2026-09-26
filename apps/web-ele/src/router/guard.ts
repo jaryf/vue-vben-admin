@@ -5,8 +5,8 @@ import { preferences } from '@vben/preferences';
 import { useAccessStore, useUserStore } from '@vben/stores';
 import { startProgress, stopProgress } from '@vben/utils';
 
-import { accessRoutes, coreRouteNames } from '#/router/routes';
 import { getAccessCodesApi, getMFAStatusApi } from '#/api/core/auth';
+import { accessRoutes, coreRouteNames } from '#/router/routes';
 import { useAuthStore } from '#/store';
 
 import { generateAccess } from './access';
@@ -73,8 +73,8 @@ function setupAccessGuard(router: Router) {
 
     // MFA 是所有已登录页面（包括 Profile 等核心路由）的前置条件。
     // 这段判断必须位于 coreRouteNames 短路返回之前。
-    const mfaEnabled = (await getMFAStatusApi()).enabled;
-    if (!mfaEnabled) {
+    const mfaStatus = await getMFAStatusApi();
+    if (!mfaStatus.enabled) {
       return to.path === '/auth/mfa-setup'
         ? true
         : { path: '/auth/mfa-setup', replace: true };
@@ -92,11 +92,6 @@ function setupAccessGuard(router: Router) {
           userStore.userInfo?.homePath ||
           preferences.app.defaultHomePath,
       );
-    }
-
-    // 已通过令牌和 MFA 检查的基本路由无需再生成动态权限路由。
-    if (coreRouteNames.includes(to.name as string)) {
-      return true;
     }
 
     // 是否已经生成过动态路由
@@ -121,6 +116,13 @@ function setupAccessGuard(router: Router) {
     accessStore.setAccessMenus(accessibleMenus);
     accessStore.setAccessRoutes(accessibleRoutes);
     accessStore.setIsAccessChecked(true);
+
+    // 个人中心等核心页面同样依赖当前用户和导航菜单，首次直达时必须先恢复这些状态。
+    // 核心路由已静态注册，初始化后直接放行，无需重新匹配动态路由。
+    if (coreRouteNames.includes(to.name as string)) {
+      return true;
+    }
+
     const redirectPath = (from.query.redirect ??
       (to.path === preferences.app.defaultHomePath
         ? userInfo.homePath || preferences.app.defaultHomePath

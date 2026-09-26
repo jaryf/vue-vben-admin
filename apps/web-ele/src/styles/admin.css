@@ -1,0 +1,643 @@
+.admin-page {
+  --admin-border: var(--el-border-color-lighter);
+  --admin-soft: var(--el-fill-color-extra-light);
+
+  padding: 26px 28px 32px;
+  color: var(--el-text-color-primary);
+}
+
+.admin-page__header {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 24px;
+}
+
+.admin-page__intro {
+  min-width: 0;
+}
+
+.admin-page__title {
+  margin: 0;
+  font-size: 25px;
+  font-weight: 650;
+  line-height: 1.4;
+  letter-spacing: -0.5px;
+}
+
+.admin-page__description {
+  max-width: 900px;
+  margin: 7px 0 0;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--el-text-color-secondary);
+}
+
+.admin-page__actions {
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+}
+
+.admin-page__content {
+  min-width: 0;
+}
+
+.admin-page .el-card,
+.admin-panel {
+  overflow: hidden;
+  background: var(--el-bg-color-overlay);
+  border: 1px solid var(--admin-border);
+  border-radius: 14px;
+  box-shadow: 0 2px 8px rgb(15 23 42 / 3%);
+}
+
+.admin-page .el-card__header {
+  padding: 18px 22px;
+  font-size: 15px;
+  font-weight: 600;
+  border-bottom-color: var(--admin-border);
+}
+
+.admin-page .el-card__body {
+  padding: 22px;
+}
+
+.admin-panel {
+  padding: 24px;
+}
+
+.admin-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 12px;
+  align-items: center;
+  padding: 15px;
+  margin-bottom: 20px;
+  background: var(--admin-soft);
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+}
+
+.admin-filter > :is(.el-input, .el-select, .el-date-editor, .el-input-number) {
+  max-width: 100%;
+}
+
+.admin-filter > .el-select:not([class*='w-']) {
+  width: 160px;
+}
+
+.admin-filter > .el-input:not([class*='w-']) {
+  width: 180px;
+}
+
+.admin-filter .el-button + .el-button,
+.admin-page__actions .el-button + .el-button {
+  margin-left: 0;
+}
+
+.admin-page :is(.el-input__wrapper, .el-select__wrapper) {
+  min-height: 36px;
+  border-radius: 8px;
+}
+
+.admin-page .el-button {
+  min-height: 34px;
+  font-weight: 500;
+  border-radius: 8px;
+}
+
+.admin-page .el-button.is-link {
+  min-height: 26px;
+  padding-inline: 3px;
+  font-size: 12px;
+}
+
+.admin-page .el-table {
+  --el-table-header-bg-color: var(--el-fill-color-light);
+  --el-table-header-text-color: var(--el-text-color-regular);
+  --el-table-row-hover-bg-color: var(--el-color-primary-light-9);
+
+  font-size: 13px;
+}
+
+.admin-page .el-table th.el-table__cell {
+  padding-block: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.admin-page .el-table td.el-table__cell {
+  padding-block: 12px;
+}
+
+.admin-page .el-table .cell {
+  line-height: 1.65;
+}
+
+.admin-page .el-table .el-table__empty-block {
+  min-height: 168px;
+}
+
+.admin-page .el-table .el-table__empty-text {
+  font-size: 13px;
+  color: var(--el-text-color-placeholder);
+}
+
+.admin-page .el-table .el-button + .el-button {
+  margin-left: 10px;
+}
+
+.admin-page :is(time, .admin-number) {
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-page time {
+  font-size: 12px;
+  color: var(--el-text-color-regular);
+  white-space: nowrap;
+}
+
+.admin-page .el-table__inner-wrapper::before {
+  background-color: var(--admin-border);
+}
+
+.admin-page .el-alert {
+  align-items: flex-start;
+  padding: 13px 16px;
+  border-radius: 10px;
+}
+
+.admin-page .el-alert__title {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.8;
+}
+
+.admin-page .el-alert__icon {
+  margin-top: 3px;
+}
+
+.admin-page .el-tabs__header {
+  margin-bottom: 20px;
+}
+
+.admin-page .el-tabs__item {
+  font-size: 13px;
+}
+
+.admin-page .el-tabs__nav-wrap::after {
+  height: 1px;
+  background: var(--admin-border);
+}
+
+.admin-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  justify-content: flex-end;
+  padding-top: 18px;
+  margin-top: 18px;
+  border-top: 1px solid var(--admin-border);
+}
+
+.admin-pagination .el-button + .el-button {
+  margin-left: 0;
+}
+
+.admin-pagination .el-pagination {
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-enum-tag.el-tag {
+  max-width: 100%;
+  height: 25px;
+  padding: 0 9px;
+  font-size: 12px;
+  font-weight: 550;
+  vertical-align: middle;
+  border-color: transparent;
+}
+
+.admin-enum-tag .el-tag__content {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  max-width: 100%;
+  white-space: nowrap;
+}
+
+.admin-enum-tag__dot {
+  flex: 0 0 5px;
+  width: 5px;
+  height: 5px;
+  background: currentcolor;
+  border-radius: 50%;
+  opacity: 0.8;
+}
+
+.admin-enum-empty {
+  color: var(--el-text-color-placeholder);
+}
+
+.el-overlay .el-dialog:not(.is-fullscreen) {
+  max-width: calc(100vw - 32px);
+  padding: 0;
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 16px;
+  box-shadow: 0 16px 64px rgb(15 23 42 / 16%);
+}
+
+.el-overlay .el-dialog__header {
+  padding: 22px 24px 18px;
+  margin-right: 0;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.el-overlay .el-dialog__title,
+.el-overlay .el-drawer__title {
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
+.el-overlay .el-dialog__headerbtn {
+  top: 13px;
+  right: 12px;
+}
+
+.el-overlay .el-dialog__body {
+  max-height: 70vh;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.el-overlay .el-dialog__footer {
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--el-border-color-lighter);
+}
+
+.el-overlay .el-drawer__header {
+  padding: 22px 24px;
+  margin-bottom: 0;
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.el-overlay .el-drawer__body {
+  padding: 24px;
+}
+
+.el-overlay :is(.el-input__wrapper, .el-select__wrapper, .el-textarea__inner) {
+  border-radius: 8px;
+}
+
+.el-overlay :is(.el-input__wrapper, .el-select__wrapper) {
+  min-height: 36px;
+}
+
+.el-overlay .el-form-item__label {
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+}
+
+.el-overlay .el-button {
+  border-radius: 8px;
+}
+
+.el-overlay .el-descriptions__label {
+  font-weight: 500;
+  color: var(--el-text-color-secondary);
+}
+
+.el-overlay .el-descriptions__cell {
+  padding: 12px 14px !important;
+}
+
+.el-overlay .el-divider__text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.el-overlay .el-message-box {
+  max-width: calc(100vw - 32px);
+  padding: 22px;
+  border-radius: 14px;
+}
+
+@media (max-width: 768px) {
+  .admin-page {
+    padding: 18px 14px 24px;
+  }
+
+  .admin-page__header {
+    flex-direction: column;
+    gap: 14px;
+    align-items: flex-start;
+    margin-bottom: 18px;
+  }
+
+  .admin-page__title {
+    font-size: 22px;
+  }
+
+  .admin-page__actions {
+    width: 100%;
+  }
+
+  .admin-page .el-card__body {
+    padding: 16px;
+  }
+
+  .admin-page .el-card__header {
+    padding: 16px;
+  }
+
+  .admin-panel {
+    padding: 18px;
+  }
+
+  .admin-filter {
+    padding: 12px;
+  }
+
+  .admin-filter
+    > :is(.el-input, .el-select, .el-date-editor, .el-input-number) {
+    flex: 1 1 100%;
+    width: 100% !important;
+  }
+
+  .admin-filter .el-date-editor {
+    min-width: 0;
+  }
+
+  .admin-pagination {
+    justify-content: flex-start;
+  }
+
+  .el-overlay .el-drawer {
+    width: 100% !important;
+  }
+
+  .el-overlay .el-dialog__body,
+  .el-overlay .el-drawer__body {
+    padding: 18px;
+  }
+}
+
+/* Dialogs are teleported out of the page; share the same table treatment. */
+.el-overlay .el-table {
+  --el-table-header-bg-color: var(--el-fill-color-light);
+  --el-table-header-text-color: var(--el-text-color-regular);
+
+  font-size: 13px;
+}
+
+.el-overlay .el-table :is(th, td).el-table__cell {
+  padding-block: 11px;
+}
+
+.el-overlay .el-table__empty-block {
+  min-height: 140px;
+}
+
+.el-overlay .el-tabs__item {
+  font-size: 13px;
+}
+
+.el-overlay .el-descriptions__content {
+  overflow-wrap: anywhere;
+}
+
+.admin-panel .el-form-item {
+  margin-bottom: 22px;
+}
+
+.admin-panel .el-form-item__label {
+  margin-bottom: 9px;
+  font-size: 13px;
+}
+
+.admin-page .el-descriptions__label {
+  font-weight: 500;
+}
+
+.admin-page .el-descriptions__cell {
+  padding: 12px 14px !important;
+}
+
+.admin-enum-tag__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.driftly-auth-card {
+  padding: 34px;
+  color: var(--el-text-color-primary);
+  background: var(--el-bg-color-overlay);
+  border: 1px solid var(--el-border-color-lighter);
+  border-radius: 20px;
+  box-shadow: 0 12px 48px rgb(15 23 42 / 7%);
+}
+
+.driftly-auth-brand {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 26px;
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--el-text-color-secondary);
+  letter-spacing: 1.5px;
+}
+
+.driftly-auth-brand > span {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  font-size: 20px;
+  color: white;
+  letter-spacing: 0;
+  background: var(--el-color-primary);
+  border-radius: 10px;
+}
+
+.driftly-auth-card h1 {
+  font-size: 24px;
+  font-weight: 650;
+  letter-spacing: -0.5px;
+}
+
+.driftly-auth-card label {
+  margin-bottom: 9px;
+  font-size: 13px;
+  color: var(--el-text-color-regular);
+}
+
+.driftly-auth-card .el-input__wrapper {
+  min-height: 43px;
+  border-radius: 9px;
+}
+
+.driftly-auth-card .el-button {
+  min-height: 40px;
+  border-radius: 9px;
+}
+
+.driftly-auth-card .el-button.is-link {
+  min-height: unset;
+}
+
+.driftly-auth-card .el-alert {
+  padding: 13px;
+  border-radius: 9px;
+}
+
+.driftly-auth-steps {
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  padding: 14px 0;
+  margin-bottom: 22px;
+  border-top: 1px solid var(--el-border-color-lighter);
+  border-bottom: 1px solid var(--el-border-color-lighter);
+}
+
+.driftly-auth-steps li {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
+.driftly-auth-steps li > span {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  background: var(--el-fill-color);
+  border-radius: 50%;
+}
+
+.driftly-auth-steps li.active {
+  font-weight: 600;
+  color: var(--el-color-primary);
+}
+
+.driftly-auth-steps li.active > span {
+  background: var(--el-color-primary-light-9);
+}
+
+.driftly-fallback {
+  min-height: calc(100vh - 140px);
+  padding: 40px 24px;
+  text-align: center;
+}
+
+.driftly-fallback > svg {
+  max-width: 300px;
+  max-height: 230px;
+}
+
+@media (max-width: 520px) {
+  .driftly-auth-card {
+    padding: 24px 20px;
+    border-radius: 14px;
+  }
+
+  .driftly-auth-card h1 {
+    font-size: 21px;
+  }
+
+  .driftly-auth-steps {
+    gap: 6px;
+  }
+
+  .driftly-auth-steps li {
+    gap: 4px;
+    font-size: 11px;
+  }
+
+  .el-overlay .el-form-item {
+    flex-direction: column;
+  }
+
+  .el-overlay .el-form-item__label {
+    justify-content: flex-start;
+    width: auto !important;
+  }
+
+  .el-overlay .el-form-item__content {
+    margin-left: 0 !important;
+  }
+}
+
+/* The centered authentication layout already supplies the outer card. */
+.driftly-auth-card[data-side='bottom'] {
+  padding: 8px 2px 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Use stronger text contrast than the default pale Element Plus tag colors. */
+
+.admin-enum-tag.el-tag--success {
+  --el-tag-text-color: #237a45;
+  --el-tag-bg-color: #edf7f0;
+}
+
+.admin-enum-tag.el-tag--warning {
+  --el-tag-text-color: #91600a;
+  --el-tag-bg-color: #fff6e6;
+}
+
+.admin-enum-tag.el-tag--danger {
+  --el-tag-text-color: #bf3444;
+  --el-tag-bg-color: #fff0f1;
+}
+
+.admin-enum-tag.el-tag--primary {
+  --el-tag-text-color: #2865b5;
+  --el-tag-bg-color: #edf4ff;
+}
+
+.admin-enum-tag.el-tag--info {
+  --el-tag-text-color: #5d6676;
+  --el-tag-bg-color: #f0f2f5;
+}
+
+.dark .admin-enum-tag.el-tag--success {
+  --el-tag-text-color: #8bddaa;
+  --el-tag-bg-color: #1d3527;
+}
+
+.dark .admin-enum-tag.el-tag--warning {
+  --el-tag-text-color: #f2cc80;
+  --el-tag-bg-color: #382e1c;
+}
+
+.dark .admin-enum-tag.el-tag--danger {
+  --el-tag-text-color: #faa;
+  --el-tag-bg-color: #3e2429;
+}
+
+.dark .admin-enum-tag.el-tag--primary {
+  --el-tag-text-color: #9ac2ff;
+  --el-tag-bg-color: #203049;
+}
+
+.dark .admin-enum-tag.el-tag--info {
+  --el-tag-text-color: #bac3d0;
+  --el-tag-bg-color: #2d323a;
+}

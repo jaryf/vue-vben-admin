@@ -1,22 +1,49 @@
 <script setup lang="ts">
+import type { ConfigVersion } from '#/api/config-versions';
+
 import { computed, onMounted, reactive, ref } from 'vue';
 
 import { useAccess } from '@vben/access';
 import { useTimezoneStore, useUserStore } from '@vben/stores';
 
-import { ElMessage, ElMessageBox } from 'element-plus';
+import {
+  ElAlert,
+  ElButton,
+  ElCard,
+  ElDescriptions,
+  ElDescriptionsItem,
+  ElDivider,
+  ElDrawer,
+  ElForm,
+  ElFormItem,
+  ElInput,
+  ElInputNumber,
+  ElMessage,
+  ElOption,
+  ElSelect,
+  ElTable,
+  ElTableColumn,
+  ElTag,
+} from 'element-plus';
 
 import {
-  approveConfigVersion, cancelScheduledConfigVersion, createConfigVersion, editConfigVersion, getConfigVersion,
-  listConfigVersions, publishConfigVersion, rejectConfigVersion,
-  rollbackConfigVersion, scheduleConfigVersion, submitConfigVersion,
+  approveConfigVersion,
+  cancelScheduledConfigVersion,
+  createConfigVersion,
+  editConfigVersion,
+  getConfigVersion,
+  listConfigVersions,
+  publishConfigVersion,
+  rejectConfigVersion,
+  rollbackConfigVersion,
+  scheduleConfigVersion,
+  submitConfigVersion,
 } from '#/api/config-versions';
-import type { ConfigVersion } from '#/api/config-versions';
+import AdminEnumTag from '#/components/admin-enum-tag.vue';
+import AdminPage from '#/components/admin-page.vue';
 import AdminTime from '#/components/admin-time.vue';
-import {
-  adminDateTimeToUtc,
-  utcToAdminDateTime,
-} from '#/utils/admin-datetime';
+import { adminDateTimeToUtc, utcToAdminDateTime } from '#/utils/admin-datetime';
+import { confirmDialog, promptDialog } from '#/utils/message-box';
 
 const { hasAccessByCodes } = useAccess();
 const userStore = useUserStore();
@@ -25,13 +52,21 @@ const canWrite = computed(() => hasAccessByCodes(['config_version.write']));
 const canApprove = computed(() => hasAccessByCodes(['config_version.approve']));
 const canPublish = computed(() => hasAccessByCodes(['config_version.publish']));
 const flags = [
-  ['emailPasswordLogin', '邮箱密码登录'], ['googleLogin', 'Google 登录'], ['appleLogin', 'Apple 登录'],
-  ['textBottle', '文字漂流瓶'], ['voiceBottle', '语音漂流瓶'], ['report', '举报'],
-  ['block', '拉黑'], ['inAppNotification', '站内通知'], ['adultContent', '成人内容'],
-  ['chatVideo', '视频聊天'], ['aiContentDistribution', 'AI 内容投放'], ['aiReply', 'AI 回复'],
+  ['emailPasswordLogin', '邮箱密码登录'],
+  ['googleLogin', 'Google 登录'],
+  ['appleLogin', 'Apple 登录'],
+  ['textBottle', '文字漂流瓶'],
+  ['voiceBottle', '语音漂流瓶'],
+  ['report', '举报'],
+  ['block', '拉黑'],
+  ['inAppNotification', '站内通知'],
+  ['adultContent', '成人内容'],
+  ['chatVideo', '视频聊天'],
+  ['aiContentDistribution', 'AI 内容投放'],
+  ['aiReply', 'AI 回复'],
   ['vipPurchasePayment', 'VIP 购买支付'],
 ] as const;
-type FlagName = typeof flags[number][0];
+type FlagName = (typeof flags)[number][0];
 const rows = ref<ConfigVersion[]>([]);
 const nextCursor = ref<null | string>(null);
 const cursorStack = ref<string[]>([]);
@@ -45,17 +80,64 @@ const editingId = ref<null | number>(null);
 const createKey = ref('');
 const status = ref('');
 const scope = ref('');
-const form = reactive({ scope: 'feature_flags' as ConfigVersion['scope'], version: '', blockedTerms: '', regexRules: '', blockedDomains: '', shortlinkDomains: '', riskMedium: 0.4, riskHigh: 0.7, riskCritical: 0.9, manualReviewBelow: 0.7, maxPercent: 0, rolloutPercent: 0, languageOverrides: '', targetInterestTagIds: '', dailyWindowStart: '', dailyWindowEnd: '', maxExposurePerBottle: '', states: {} as Record<FlagName, 'false' | 'inherit' | 'true'> });
-const statusText = (value: string) => ({ draft: '草稿', reviewing: '待审批', approved: '已批准', scheduled: '待定时发布', published: '已发布', retired: '已退役' })[value as ConfigVersion['status']] || value;
-const scopeText = (value: string) => ({ feature_flags: '功能开关', moderation_rules: '审核规则与风险阈值', ai_distribution: 'AI 投放策略' })[value as ConfigVersion['scope']] || value;
-const configuredFlags = (row: ConfigVersion) => 'flags' in row.payload ? row.payload.flags : {};
-const configuredTerms = (row: ConfigVersion) => 'blockedTerms' in row.payload ? row.payload.blockedTerms || [] : [];
-const configuredPatterns = (row: ConfigVersion) => 'regexRules' in row.payload ? row.payload.regexRules || [] : [];
-const configuredDomains = (row: ConfigVersion, kind: 'blockedDomains' | 'shortlinkDomains') => kind === 'blockedDomains'
-  ? ('blockedDomains' in row.payload ? row.payload.blockedDomains || [] : [])
-  : ('shortlinkDomains' in row.payload ? row.payload.shortlinkDomains || [] : []);
-const configuredThresholds = (row: ConfigVersion) => 'riskThresholds' in row.payload ? row.payload.riskThresholds : undefined;
-const configuredAI = (row: ConfigVersion) => 'maxPercent' in row.payload ? row.payload : null;
+const form = reactive({
+  scope: 'feature_flags' as ConfigVersion['scope'],
+  version: '',
+  blockedTerms: '',
+  regexRules: '',
+  blockedDomains: '',
+  shortlinkDomains: '',
+  riskMedium: 0.4,
+  riskHigh: 0.7,
+  riskCritical: 0.9,
+  manualReviewBelow: 0.7,
+  maxPercent: 0,
+  rolloutPercent: 0,
+  languageOverrides: '',
+  targetInterestTagIds: '',
+  dailyWindowStart: '',
+  dailyWindowEnd: '',
+  maxExposurePerBottle: '',
+  states: {} as Record<FlagName, 'false' | 'inherit' | 'true'>,
+});
+const statusText = (value: string) =>
+  ({
+    draft: '草稿',
+    reviewing: '待审批',
+    approved: '已批准',
+    scheduled: '待定时发布',
+    published: '已发布',
+    retired: '已退役',
+  })[value as ConfigVersion['status']] || value;
+const scopeText = (value: string) =>
+  ({
+    feature_flags: '功能开关',
+    moderation_rules: '审核规则与风险阈值',
+    ai_distribution: 'AI 投放策略',
+  })[value as ConfigVersion['scope']] || value;
+const configuredFlags = (row: ConfigVersion) =>
+  'flags' in row.payload ? row.payload.flags : {};
+const configuredTerms = (row: ConfigVersion) =>
+  'blockedTerms' in row.payload ? row.payload.blockedTerms || [] : [];
+const configuredPatterns = (row: ConfigVersion) =>
+  'regexRules' in row.payload ? row.payload.regexRules || [] : [];
+const configuredDomains = (
+  row: ConfigVersion,
+  kind: 'blockedDomains' | 'shortlinkDomains',
+) => {
+  if (kind === 'blockedDomains') {
+    return 'blockedDomains' in row.payload
+      ? row.payload.blockedDomains || []
+      : [];
+  }
+  return 'shortlinkDomains' in row.payload
+    ? row.payload.shortlinkDomains || []
+    : [];
+};
+const configuredThresholds = (row: ConfigVersion) =>
+  'riskThresholds' in row.payload ? row.payload.riskThresholds : undefined;
+const configuredAI = (row: ConfigVersion) =>
+  'maxPercent' in row.payload ? row.payload : null;
 const currentUserId = computed(() => {
   const value = Number(userStore.userInfo?.userId);
   return Number.isSafeInteger(value) && value > 0 ? value : null;
@@ -63,7 +145,13 @@ const currentUserId = computed(() => {
 function payloadFields(row: ConfigVersion): Record<string, string> {
   if (row.scope === 'feature_flags') {
     const values = configuredFlags(row);
-    return Object.fromEntries(flags.map(([name, label]) => [label, values[name] === undefined ? '继承基础配置' : values[name] ? '开启' : '关闭']));
+    return Object.fromEntries(
+      flags.map(([name, label]) => {
+        const value = values[name];
+        if (value === undefined) return [label, '继承基础配置'];
+        return [label, value ? '开启' : '关闭'];
+      }),
+    );
   }
   if (row.scope === 'moderation_rules') {
     const risk = configuredThresholds(row);
@@ -83,32 +171,60 @@ function payloadFields(row: ConfigVersion): Record<string, string> {
     全局最高比例: `${ai?.maxPercent ?? 0}%`,
     用户灰度比例: `${ai?.rolloutPercent ?? 0}%`,
     目标兴趣标签: ai?.targetInterestTagIds?.join('、') || '不限',
-    每日投放时段: ai?.dailyWindowStart && ai?.dailyWindowEnd ? `${ai.dailyWindowStart}–${ai.dailyWindowEnd}（Asia/Kolkata）` : '全天',
-    单瓶最大曝光: ai?.maxExposurePerBottle ? String(ai.maxExposurePerBottle) : '沿用漂流瓶基础上限',
+    每日投放时段:
+      ai?.dailyWindowStart && ai?.dailyWindowEnd
+        ? `${ai.dailyWindowStart}–${ai.dailyWindowEnd}（Asia/Kolkata）`
+        : '全天',
+    单瓶最大曝光: ai?.maxExposurePerBottle
+      ? String(ai.maxExposurePerBottle)
+      : '沿用漂流瓶基础上限',
   };
-  for (const [code, percent] of Object.entries(ai?.languageOverrides || {})) values[`语言 ${code}`] = `${percent}%`;
+  for (const [code, percent] of Object.entries(ai?.languageOverrides || {}))
+    values[`语言 ${code}`] = `${percent}%`;
   return values;
 }
 const comparisonRows = computed(() => {
   if (!detail.value) return [];
   const before = published.value ? payloadFields(published.value) : {};
   const after = payloadFields(detail.value);
-  return [...new Set([...Object.keys(before), ...Object.keys(after)])].sort().filter((field) => before[field] !== after[field]).map((field) => ({
-    field, before: before[field] ?? (published.value ? '未配置' : '尚无发布版本'), after: after[field] ?? '未配置',
-  }));
+  return [...new Set([...Object.keys(before), ...Object.keys(after)])]
+    .toSorted()
+    .filter((field) => before[field] !== after[field])
+    .map((field) => ({
+      field,
+      before: before[field] ?? (published.value ? '未配置' : '尚无发布版本'),
+      after: after[field] ?? '未配置',
+    }));
 });
 
 async function load(cursor = '') {
   loading.value = true;
   try {
-    const result = await listConfigVersions({ scope: scope.value || undefined, status: status.value || undefined, cursor: cursor || undefined, limit: 20 });
+    const result = await listConfigVersions({
+      scope: scope.value || undefined,
+      status: status.value || undefined,
+      cursor: cursor || undefined,
+      limit: 20,
+    });
     rows.value = result.items || [];
     nextCursor.value = result.nextCursor;
-  } finally { loading.value = false; }
+  } finally {
+    loading.value = false;
+  }
 }
-function search() { cursorStack.value = []; void load(); }
-function next() { if (!nextCursor.value) return; cursorStack.value.push(nextCursor.value); void load(nextCursor.value); }
-function previous() { cursorStack.value.pop(); void load(cursorStack.value.at(-1) || ''); }
+function search() {
+  cursorStack.value = [];
+  void load();
+}
+function next() {
+  if (!nextCursor.value) return;
+  cursorStack.value.push(nextCursor.value);
+  void load(nextCursor.value);
+}
+function previous() {
+  cursorStack.value.pop();
+  void load(cursorStack.value.at(-1) || '');
+}
 async function openDetail(row: ConfigVersion) {
   const [current, page] = await Promise.all([
     getConfigVersion(row.versionId),
@@ -126,8 +242,12 @@ async function openEditor(row?: ConfigVersion) {
   form.version = current?.version ?? '';
   form.blockedTerms = current ? configuredTerms(current).join('\n') : '';
   form.regexRules = current ? configuredPatterns(current).join('\n') : '';
-  form.blockedDomains = current ? configuredDomains(current, 'blockedDomains').join('\n') : '';
-  form.shortlinkDomains = current ? configuredDomains(current, 'shortlinkDomains').join('\n') : '';
+  form.blockedDomains = current
+    ? configuredDomains(current, 'blockedDomains').join('\n')
+    : '';
+  form.shortlinkDomains = current
+    ? configuredDomains(current, 'shortlinkDomains').join('\n')
+    : '';
   const risk = current ? configuredThresholds(current) : undefined;
   form.riskMedium = risk?.medium ?? 0.4;
   form.riskHigh = risk?.high ?? 0.7;
@@ -136,58 +256,219 @@ async function openEditor(row?: ConfigVersion) {
   const ai = current ? configuredAI(current) : null;
   form.maxPercent = ai?.maxPercent ?? 0;
   form.rolloutPercent = ai?.rolloutPercent ?? 0;
-  form.languageOverrides = ai?.languageOverrides ? Object.entries(ai.languageOverrides).map(([code, percent]) => `${code}=${percent}`).join('\n') : '';
+  form.languageOverrides = ai?.languageOverrides
+    ? Object.entries(ai.languageOverrides)
+        .map(([code, percent]) => `${code}=${percent}`)
+        .join('\n')
+    : '';
   form.targetInterestTagIds = ai?.targetInterestTagIds?.join(', ') ?? '';
   form.dailyWindowStart = ai?.dailyWindowStart ?? '';
   form.dailyWindowEnd = ai?.dailyWindowEnd ?? '';
-  form.maxExposurePerBottle = ai?.maxExposurePerBottle ? String(ai.maxExposurePerBottle) : '';
+  form.maxExposurePerBottle = ai?.maxExposurePerBottle
+    ? String(ai.maxExposurePerBottle)
+    : '';
   for (const [name] of flags) {
     const value = current ? configuredFlags(current)[name] : undefined;
-    form.states[name] = value === undefined ? 'inherit' : String(value) as 'false' | 'true';
+    form.states[name] =
+      value === undefined ? 'inherit' : (String(value) as 'false' | 'true');
   }
   editorOpen.value = true;
 }
 async function save() {
   const version = form.version.trim();
-  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(version)) { ElMessage.error('请填写有效版本号'); return; }
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(version)) {
+    ElMessage.error('请填写有效版本号');
+    return;
+  }
   let payload: ConfigVersion['payload'];
   if (form.scope === 'feature_flags') {
     const selected: Record<string, boolean> = {};
-    for (const [name] of flags) if (form.states[name] !== 'inherit') selected[name] = form.states[name] === 'true';
-    if (Object.keys(selected).length === 0) { ElMessage.error('至少配置一项能力'); return; }
+    for (const [name] of flags)
+      if (form.states[name] !== 'inherit')
+        selected[name] = form.states[name] === 'true';
+    if (Object.keys(selected).length === 0) {
+      ElMessage.error('至少配置一项能力');
+      return;
+    }
     payload = { flags: selected };
   } else if (form.scope === 'moderation_rules') {
-    const terms = form.blockedTerms.split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
-    const patterns = form.regexRules.split(/\r?\n/).map((value) => value.trim()).filter(Boolean);
-    const blockedDomains = form.blockedDomains.split(/\r?\n/).map((value) => value.trim().toLowerCase()).filter(Boolean);
-    const shortlinkDomains = form.shortlinkDomains.split(/\r?\n/).map((value) => value.trim().toLowerCase()).filter(Boolean);
-    if (terms.length > 100 || patterns.length > 20 || terms.some((value) => [...value].length < 2 || [...value].length > 64 || /[\x00-\x1F]/.test(value)) || new Set(terms.map((value) => value.toLocaleLowerCase())).size !== terms.length) { ElMessage.error('拦截词最多 100 条、每条 2 至 64 字且不能重复'); return; }
-    if (patterns.some((value) => [...value].length < 2 || [...value].length > 256 || /[\x00-\x1F]/.test(value)) || new Set(patterns).size !== patterns.length) { ElMessage.error('正则最多 20 条、每条 2 至 256 字且不能重复'); return; }
-    const domainPattern = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$/;
+    const terms = form.blockedTerms
+      .split(/\r?\n/)
+      .map((value) => value.trim())
+      .filter(Boolean);
+    const patterns = form.regexRules
+      .split(/\r?\n/)
+      .map((value) => value.trim())
+      .filter(Boolean);
+    const blockedDomains = form.blockedDomains
+      .split(/\r?\n/)
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean);
+    const shortlinkDomains = form.shortlinkDomains
+      .split(/\r?\n/)
+      .map((value) => value.trim().toLowerCase())
+      .filter(Boolean);
+    if (
+      terms.length > 100 ||
+      patterns.length > 20 ||
+      terms.some(
+        (value) =>
+          [...value].length < 2 ||
+          [...value].length > 64 ||
+          // oxlint-disable-next-line no-control-regex -- Reject control characters in configured moderation terms.
+          /[\u0000-\u001F]/.test(value),
+      ) ||
+      new Set(terms.map((value) => value.toLocaleLowerCase())).size !==
+        terms.length
+    ) {
+      ElMessage.error('拦截词最多 100 条、每条 2 至 64 字且不能重复');
+      return;
+    }
+    if (
+      patterns.some(
+        (value) =>
+          [...value].length < 2 ||
+          [...value].length > 256 ||
+          // oxlint-disable-next-line no-control-regex -- Reject control characters in configured moderation patterns.
+          /[\u0000-\u001F]/.test(value),
+      ) ||
+      new Set(patterns).size !== patterns.length
+    ) {
+      ElMessage.error('正则最多 20 条、每条 2 至 256 字且不能重复');
+      return;
+    }
+    const domainPattern =
+      /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]*[a-z0-9])?)+$/;
     const domains = [...blockedDomains, ...shortlinkDomains];
-    if (blockedDomains.length > 100 || shortlinkDomains.length > 50 || new Set(domains).size !== domains.length || domains.some((value) => value.length < 4 || value.length > 253 || !domainPattern.test(value) || value.split('.').some((part) => part.length > 63) || (value.split('.').at(-1)?.length || 0) < 2)) { ElMessage.error('域名须为不带协议、端口或路径的 ASCII 主机名；普通域名最多 100 条、短链域名最多 50 条且不能重复'); return; }
-    if (![form.riskMedium, form.riskHigh, form.riskCritical, form.manualReviewBelow].every(Number.isFinite) || !(form.riskMedium > 0 && form.riskMedium < form.riskHigh && form.riskHigh < form.riskCritical && form.riskCritical <= 1) || form.manualReviewBelow < 0 || form.manualReviewBelow > 1) { ElMessage.error('风险阈值须满足 0 < 中风险 < 高风险 < 极高风险 ≤ 1，人工复核边界须在 0～1'); return; }
-    payload = { ...(terms.length ? { blockedTerms: terms } : {}), ...(patterns.length ? { regexRules: patterns } : {}), ...(blockedDomains.length ? { blockedDomains } : {}), ...(shortlinkDomains.length ? { shortlinkDomains } : {}), riskThresholds: { medium: form.riskMedium, high: form.riskHigh, critical: form.riskCritical, manualReviewBelow: form.manualReviewBelow } };
+    if (
+      blockedDomains.length > 100 ||
+      shortlinkDomains.length > 50 ||
+      new Set(domains).size !== domains.length ||
+      domains.some(
+        (value) =>
+          value.length < 4 ||
+          value.length > 253 ||
+          !domainPattern.test(value) ||
+          value.split('.').some((part) => part.length > 63) ||
+          (value.split('.').at(-1)?.length || 0) < 2,
+      )
+    ) {
+      ElMessage.error(
+        '域名须为不带协议、端口或路径的 ASCII 主机名；普通域名最多 100 条、短链域名最多 50 条且不能重复',
+      );
+      return;
+    }
+    if (
+      ![
+        form.riskMedium,
+        form.riskHigh,
+        form.riskCritical,
+        form.manualReviewBelow,
+      ].every((value) => Number.isFinite(value)) ||
+      !(
+        form.riskMedium > 0 &&
+        form.riskMedium < form.riskHigh &&
+        form.riskHigh < form.riskCritical &&
+        form.riskCritical <= 1
+      ) ||
+      form.manualReviewBelow < 0 ||
+      form.manualReviewBelow > 1
+    ) {
+      ElMessage.error(
+        '风险阈值须满足 0 < 中风险 < 高风险 < 极高风险 ≤ 1，人工复核边界须在 0～1',
+      );
+      return;
+    }
+    payload = {
+      ...(terms.length > 0 ? { blockedTerms: terms } : {}),
+      ...(patterns.length > 0 ? { regexRules: patterns } : {}),
+      ...(blockedDomains.length > 0 ? { blockedDomains } : {}),
+      ...(shortlinkDomains.length > 0 ? { shortlinkDomains } : {}),
+      riskThresholds: {
+        medium: form.riskMedium,
+        high: form.riskHigh,
+        critical: form.riskCritical,
+        manualReviewBelow: form.manualReviewBelow,
+      },
+    };
   } else {
-    if (!Number.isInteger(form.maxPercent) || form.maxPercent < 0 || form.maxPercent > 20 || !Number.isInteger(form.rolloutPercent) || form.rolloutPercent < 0 || form.rolloutPercent > 100) { ElMessage.error('AI 上限必须为 0～20%，灰度比例必须为 0～100%'); return; }
+    if (
+      !Number.isInteger(form.maxPercent) ||
+      form.maxPercent < 0 ||
+      form.maxPercent > 20 ||
+      !Number.isInteger(form.rolloutPercent) ||
+      form.rolloutPercent < 0 ||
+      form.rolloutPercent > 100
+    ) {
+      ElMessage.error('AI 上限必须为 0～20%，灰度比例必须为 0～100%');
+      return;
+    }
     const languageOverrides: Record<string, number> = {};
-    for (const line of form.languageOverrides.split(/\r?\n/).map((value) => value.trim()).filter(Boolean)) {
+    for (const line of form.languageOverrides
+      .split(/\r?\n/)
+      .map((value) => value.trim())
+      .filter(Boolean)) {
       const parts = line.split('=');
       const code = parts[0]?.trim();
       const percent = Number(parts[1]);
-      if (parts.length !== 2 || !code || !/^[a-z][a-z0-9-]{1,15}$/.test(code) || !Number.isInteger(percent) || percent < 0 || percent > 20 || code in languageOverrides) { ElMessage.error('语言覆盖请每行填写「语言代码=0～20」且不要重复'); return; }
+      if (
+        parts.length !== 2 ||
+        !code ||
+        !/^[a-z][a-z0-9-]{1,15}$/.test(code) ||
+        !Number.isInteger(percent) ||
+        percent < 0 ||
+        percent > 20 ||
+        code in languageOverrides
+      ) {
+        ElMessage.error('语言覆盖请每行填写「语言代码=0～20」且不要重复');
+        return;
+      }
       languageOverrides[code] = percent;
     }
-    const targetInterestTagIds = form.targetInterestTagIds.split(',').map((value) => value.trim()).filter(Boolean).map(Number);
-    if (targetInterestTagIds.length > 100 || targetInterestTagIds.some((id) => !Number.isSafeInteger(id) || id < 1) || new Set(targetInterestTagIds).size !== targetInterestTagIds.length) { ElMessage.error('目标兴趣标签最多 100 个，请填写不重复的有效 ID'); return; }
+    const targetInterestTagIds = form.targetInterestTagIds
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .map(Number);
+    if (
+      targetInterestTagIds.length > 100 ||
+      targetInterestTagIds.some((id) => !Number.isSafeInteger(id) || id < 1) ||
+      new Set(targetInterestTagIds).size !== targetInterestTagIds.length
+    ) {
+      ElMessage.error('目标兴趣标签最多 100 个，请填写不重复的有效 ID');
+      return;
+    }
     const windowPattern = /^([01]\d|2[0-3]):[0-5]\d$/;
     const dailyWindowStart = form.dailyWindowStart.trim();
     const dailyWindowEnd = form.dailyWindowEnd.trim();
-    if ((dailyWindowStart || dailyWindowEnd) && (!windowPattern.test(dailyWindowStart) || !windowPattern.test(dailyWindowEnd) || dailyWindowStart === dailyWindowEnd)) { ElMessage.error('每日投放时段请填写不同的 HH:mm 起止时间，结束时刻不含在内'); return; }
-    const maxExposurePerBottle = form.maxExposurePerBottle.trim() ? Number(form.maxExposurePerBottle.trim()) : undefined;
-    if (maxExposurePerBottle !== undefined && (!Number.isSafeInteger(maxExposurePerBottle) || maxExposurePerBottle < 1 || maxExposurePerBottle > 1_000_000)) { ElMessage.error('单瓶最大曝光需为 1～1,000,000'); return; }
-    payload = { maxPercent: form.maxPercent, rolloutPercent: form.rolloutPercent, languageOverrides,
-      ...(targetInterestTagIds.length ? { targetInterestTagIds } : {}),
+    if (
+      (dailyWindowStart || dailyWindowEnd) &&
+      (!windowPattern.test(dailyWindowStart) ||
+        !windowPattern.test(dailyWindowEnd) ||
+        dailyWindowStart === dailyWindowEnd)
+    ) {
+      ElMessage.error(
+        '每日投放时段请填写不同的 HH:mm 起止时间，结束时刻不含在内',
+      );
+      return;
+    }
+    const maxExposurePerBottle = form.maxExposurePerBottle.trim()
+      ? Number(form.maxExposurePerBottle.trim())
+      : undefined;
+    if (
+      maxExposurePerBottle !== undefined &&
+      (!Number.isSafeInteger(maxExposurePerBottle) ||
+        maxExposurePerBottle < 1 ||
+        maxExposurePerBottle > 1_000_000)
+    ) {
+      ElMessage.error('单瓶最大曝光需为 1～1,000,000');
+      return;
+    }
+    payload = {
+      maxPercent: form.maxPercent,
+      rolloutPercent: form.rolloutPercent,
+      languageOverrides,
+      ...(targetInterestTagIds.length > 0 ? { targetInterestTagIds } : {}),
       ...(dailyWindowStart ? { dailyWindowStart, dailyWindowEnd } : {}),
       ...(maxExposurePerBottle === undefined ? {} : { maxExposurePerBottle }),
     };
@@ -195,35 +476,69 @@ async function save() {
   saving.value = true;
   try {
     const data = { scope: form.scope, version, payload };
-    if (editingId.value === null) await createConfigVersion(data, createKey.value);
-    else await editConfigVersion(editingId.value, data);
-    editorOpen.value = false; ElMessage.success('草稿已保存'); await load(cursorStack.value.at(-1) || '');
-  } finally { saving.value = false; }
+    await (editingId.value === null
+      ? createConfigVersion(data, createKey.value)
+      : editConfigVersion(editingId.value, data));
+    editorOpen.value = false;
+    ElMessage.success('草稿已保存');
+    await load(cursorStack.value.at(-1) || '');
+  } finally {
+    saving.value = false;
+  }
 }
-async function action(row: ConfigVersion, kind: 'approve' | 'cancel_schedule' | 'publish' | 'reject' | 'rollback' | 'schedule' | 'submit') {
+async function action(
+  row: ConfigVersion,
+  kind:
+    | 'approve'
+    | 'cancel_schedule'
+    | 'publish'
+    | 'reject'
+    | 'rollback'
+    | 'schedule'
+    | 'submit',
+) {
   if (kind === 'rollback') {
-    const result = await ElMessageBox.prompt('输入新的回滚版本号。创建后仍需由其他管理员审批并发布。', `回滚 ${row.version}`, { inputPattern: /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/, inputErrorMessage: '版本号格式无效' });
-    await rollbackConfigVersion(row.versionId, result.value, crypto.randomUUID());
-  } else if (kind === 'schedule') {
-    const result = await ElMessageBox.prompt(`填写 ${timezoneStore.timezone} 时区的本地时间（YYYY-MM-DD HH:mm:ss），须在未来 30 天内。每种配置类型同一时间只能有一个待发布版本。`, `预约发布 ${row.version}`, {
-      inputValue: utcToAdminDateTime(
-        Date.now() + 3_600_000,
-        timezoneStore.timezone,
-      ),
-      inputValidator: (value) => {
-        try {
-          const instant = Date.parse(
-            adminDateTimeToUtc(value, timezoneStore.timezone) || '',
-          );
-          return Number.isFinite(instant) &&
-            instant > Date.now() + 60_000 &&
-            instant <= Date.now() + 30 * 24 * 3_600_000 ||
-            '请输入未来 30 天内的有效时间';
-        } catch (error) {
-          return error instanceof Error ? error.message : '日期时间无效';
-        }
+    const result = await promptDialog(
+      '输入新的回滚版本号。创建后仍需由其他管理员审批并发布。',
+      `回滚 ${row.version}`,
+      {
+        inputPattern: /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/,
+        inputErrorMessage: '版本号格式无效',
       },
-    });
+    );
+    if (!result) return;
+    await rollbackConfigVersion(
+      row.versionId,
+      result.value,
+      crypto.randomUUID(),
+    );
+  } else if (kind === 'schedule') {
+    const result = await promptDialog(
+      `填写 ${timezoneStore.timezone} 时区的本地时间（YYYY-MM-DD HH:mm:ss），须在未来 30 天内。每种配置类型同一时间只能有一个待发布版本。`,
+      `预约发布 ${row.version}`,
+      {
+        inputValue: utcToAdminDateTime(
+          Date.now() + 3_600_000,
+          timezoneStore.timezone,
+        ),
+        inputValidator: (value) => {
+          try {
+            const instant = Date.parse(
+              adminDateTimeToUtc(value, timezoneStore.timezone) || '',
+            );
+            return (
+              (Number.isFinite(instant) &&
+                instant > Date.now() + 60_000 &&
+                instant <= Date.now() + 30 * 24 * 3_600_000) ||
+              '请输入未来 30 天内的有效时间'
+            );
+          } catch (error) {
+            return error instanceof Error ? error.message : '日期时间无效';
+          }
+        },
+      },
+    );
+    if (!result) return;
     const scheduledAt = adminDateTimeToUtc(
       result.value,
       timezoneStore.timezone,
@@ -231,27 +546,557 @@ async function action(row: ConfigVersion, kind: 'approve' | 'cancel_schedule' | 
     if (!scheduledAt) return;
     await scheduleConfigVersion(row.versionId, scheduledAt);
   } else if (kind === 'cancel_schedule') {
-    await ElMessageBox.confirm(`取消版本 ${row.version} 的定时发布并恢复为已批准状态？`, '取消定时发布', { type: 'warning' });
+    if (
+      !(await confirmDialog(
+        `取消版本 ${row.version} 的定时发布并恢复为已批准状态？`,
+        '取消定时发布',
+        { type: 'warning' },
+      ))
+    )
+      return;
     await cancelScheduledConfigVersion(row.versionId);
   } else if (kind === 'approve' || kind === 'reject') {
-    const result = await ElMessageBox.prompt(kind === 'reject' ? '请输入驳回原因' : '可填写审批说明', kind === 'reject' ? '驳回配置' : '批准配置', { inputValidator: (value) => value.length > 500 ? '说明最多 500 字' : kind === 'reject' && !value.trim() ? '请填写驳回原因' : true });
-    if (kind === 'approve') await approveConfigVersion(row.versionId, result.value);
-    else await rejectConfigVersion(row.versionId, result.value);
+    const result = await promptDialog(
+      kind === 'reject' ? '请输入驳回原因' : '可填写审批说明',
+      kind === 'reject' ? '驳回配置' : '批准配置',
+      {
+        inputValidator: (value) => {
+          if (value.length > 500) return '说明最多 500 字';
+          return kind === 'reject' && !value.trim() ? '请填写驳回原因' : true;
+        },
+      },
+    );
+    if (!result) return;
+    await (kind === 'approve'
+      ? approveConfigVersion(row.versionId, result.value)
+      : rejectConfigVersion(row.versionId, result.value));
   } else {
-    await ElMessageBox.confirm(`确定${kind === 'submit' ? '提交审批' : '发布'}版本 ${row.version} 吗？`, '确认配置操作', { type: 'warning' });
-    if (kind === 'submit') await submitConfigVersion(row.versionId);
-    else await publishConfigVersion(row.versionId);
+    if (
+      !(await confirmDialog(
+        `确定${kind === 'submit' ? '提交审批' : '发布'}版本 ${row.version} 吗？`,
+        '确认配置操作',
+        { type: 'warning' },
+      ))
+    )
+      return;
+    await (kind === 'submit'
+      ? submitConfigVersion(row.versionId)
+      : publishConfigVersion(row.versionId));
   }
-  ElMessage.success('配置状态已更新'); await load(cursorStack.value.at(-1) || '');
+  ElMessage.success('配置状态已更新');
+  await load(cursorStack.value.at(-1) || '');
 }
-onMounted(() => { void load(); });
+onMounted(() => {
+  void load();
+});
 </script>
 
 <template>
-  <div class="p-5"><ElCard shadow="never"><template #header><div class="flex items-center justify-between"><span>版本化配置与审核规则</span><ElButton v-if="canWrite" type="primary" @click="openEditor()">创建草稿</ElButton></div></template>
-    <ElAlert class="mb-4" title="功能开关不能开启基础配置禁用的能力。附加审核词、正则、域名与短链规则在同步消息和异步文字瓶审核中生效，风险阈值用于异步文字瓶供应商评分；固定联系方式和外链规则始终有效。AI 投放默认 0%，单语种最高 20%；目标兴趣、每日时段和单瓶曝光上限也通过版本审批生效。发布与回滚均需异人审批；定时发布最多预约未来 30 天，每种类型只保留一个待发布版本。" type="info" show-icon :closable="false" />
-    <div class="mb-4 flex gap-3"><ElSelect v-model="scope" clearable placeholder="全部类型" class="!w-40"><ElOption label="功能开关" value="feature_flags" /><ElOption label="审核规则与风险阈值" value="moderation_rules" /><ElOption label="AI 投放策略" value="ai_distribution" /></ElSelect><ElSelect v-model="status" clearable placeholder="全部状态" class="!w-36"><ElOption label="草稿" value="draft" /><ElOption label="待审批" value="reviewing" /><ElOption label="已批准" value="approved" /><ElOption label="待定时发布" value="scheduled" /><ElOption label="已发布" value="published" /><ElOption label="已退役" value="retired" /></ElSelect><ElButton @click="search">查询</ElButton></div>
-    <ElTable v-loading="loading" :data="rows" row-key="versionId"><ElTableColumn prop="versionId" label="ID" width="85" /><ElTableColumn label="类型" width="120"><template #default="{ row }">{{ scopeText(row.scope) }}</template></ElTableColumn><ElTableColumn prop="version" label="版本" min-width="125" /><ElTableColumn label="状态" width="100"><template #default="{ row }">{{ statusText(row.status) }}</template></ElTableColumn><ElTableColumn prop="requestedBy" label="申请人" width="95" /><ElTableColumn prop="reviewedBy" label="审批人" width="95" /><ElTableColumn label="预约发布时间" min-width="235"><template #default="{ row }"><AdminTime :value="row.scheduledAt" /></template></ElTableColumn><ElTableColumn prop="rollbackOf" label="回滚来源" width="100" /><ElTableColumn prop="updatedAt" label="更新时间" min-width="185"><template #default="{ row }"><AdminTime :value="row.updatedAt" /></template></ElTableColumn><ElTableColumn label="操作" min-width="310" fixed="right"><template #default="{ row }"><ElButton link type="primary" @click="openDetail(row)">详情</ElButton><ElButton v-if="canWrite && row.status === 'draft' && row.requestedBy === currentUserId" link type="primary" @click="openEditor(row)">编辑</ElButton><ElButton v-if="canWrite && row.status === 'draft' && row.requestedBy === currentUserId" link type="success" @click="action(row, 'submit')">提交</ElButton><ElButton v-if="canApprove && row.status === 'reviewing' && row.requestedBy !== currentUserId" link type="success" @click="action(row, 'approve')">批准</ElButton><ElButton v-if="canApprove && row.status === 'reviewing' && row.requestedBy !== currentUserId" link type="warning" @click="action(row, 'reject')">驳回</ElButton><ElButton v-if="canPublish && row.status === 'approved'" link type="success" @click="action(row, 'publish')">发布</ElButton><ElButton v-if="canPublish && row.status === 'approved'" link type="primary" @click="action(row, 'schedule')">定时发布</ElButton><ElButton v-if="canPublish && row.status === 'scheduled'" link type="warning" @click="action(row, 'cancel_schedule')">取消定时</ElButton><ElButton v-if="canWrite && ['published', 'retired'].includes(row.status)" link type="warning" @click="action(row, 'rollback')">回滚草稿</ElButton></template></ElTableColumn></ElTable><div class="mt-4 flex justify-end gap-2"><ElButton :disabled="cursorStack.length === 0" @click="previous">上一页</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton></div>
-  </ElCard><ElDrawer v-model="detailOpen" title="配置版本详情" size="55%" @closed="detail = null"><ElDescriptions v-if="detail" :column="2" border><ElDescriptionsItem label="类型">{{ scopeText(detail.scope) }}</ElDescriptionsItem><ElDescriptionsItem label="版本">{{ detail.version }}</ElDescriptionsItem><ElDescriptionsItem label="状态">{{ statusText(detail.status) }}</ElDescriptionsItem><ElDescriptionsItem label="申请人">{{ detail.requestedBy }}</ElDescriptionsItem><ElDescriptionsItem label="审批人">{{ detail.reviewedBy ?? '—' }}</ElDescriptionsItem><ElDescriptionsItem label="审批说明">{{ detail.reviewNote || '—' }}</ElDescriptionsItem><ElDescriptionsItem label="定时发布"><AdminTime :value="detail.scheduledAt" /><span v-if="detail.scheduledAt" class="ml-2 text-gray-500">UTC {{ detail.scheduledAt }}</span></ElDescriptionsItem><ElDescriptionsItem label="预约人">{{ detail.scheduledBy ?? '—' }}</ElDescriptionsItem><ElDescriptionsItem label="回滚来源">{{ detail.rollbackOf ?? '—' }}</ElDescriptionsItem></ElDescriptions><ElDivider>{{ detail?.scope === 'feature_flags' ? '能力配置' : detail?.scope === 'moderation_rules' ? '附加审核规则' : 'AI 投放规则' }}</ElDivider><ElDescriptions v-if="detail?.scope === 'feature_flags'" :column="1" border><ElDescriptionsItem v-for="[name, label] in flags" :key="name" :label="label">{{ configuredFlags(detail)[name] === undefined ? '继承基础配置' : configuredFlags(detail)[name] ? '开启' : '关闭' }}</ElDescriptionsItem></ElDescriptions><div v-else-if="detail?.scope === 'moderation_rules'"><ElDivider>附加拦截词</ElDivider><div class="flex flex-wrap gap-2"><ElTag v-for="term in configuredTerms(detail)" :key="term">{{ term }}</ElTag><span v-if="!configuredTerms(detail).length">无</span></div><ElDivider>附加正则</ElDivider><div v-for="pattern in configuredPatterns(detail)" :key="pattern" class="mb-2 break-all font-mono">{{ pattern }}</div><span v-if="!configuredPatterns(detail).length">无</span><ElDivider>附加拦截域名</ElDivider><div class="flex flex-wrap gap-2"><ElTag v-for="domain in configuredDomains(detail, 'blockedDomains')" :key="domain">{{ domain }}</ElTag><span v-if="!configuredDomains(detail, 'blockedDomains').length">无</span></div><ElDivider>短链域名</ElDivider><div class="flex flex-wrap gap-2"><ElTag v-for="domain in configuredDomains(detail, 'shortlinkDomains')" :key="domain">{{ domain }}</ElTag><span v-if="!configuredDomains(detail, 'shortlinkDomains').length">无</span></div><ElDivider>风险阈值</ElDivider><ElDescriptions :column="1" border><ElDescriptionsItem label="中风险起点">{{ configuredThresholds(detail)?.medium ?? 0.4 }}</ElDescriptionsItem><ElDescriptionsItem label="高风险起点">{{ configuredThresholds(detail)?.high ?? 0.7 }}</ElDescriptionsItem><ElDescriptionsItem label="极高风险起点">{{ configuredThresholds(detail)?.critical ?? 0.9 }}</ElDescriptionsItem><ElDescriptionsItem label="低于该分数转人工">{{ configuredThresholds(detail)?.manualReviewBelow ?? 0.7 }}</ElDescriptionsItem></ElDescriptions></div><ElDescriptions v-else-if="detail && configuredAI(detail)" :column="1" border><ElDescriptionsItem label="全局最高比例">{{ configuredAI(detail)?.maxPercent }}%</ElDescriptionsItem><ElDescriptionsItem label="用户灰度比例">{{ configuredAI(detail)?.rolloutPercent }}%</ElDescriptionsItem><ElDescriptionsItem label="语言覆盖">{{ JSON.stringify(configuredAI(detail)?.languageOverrides || {}) }}</ElDescriptionsItem><ElDescriptionsItem label="目标兴趣标签">{{ configuredAI(detail)?.targetInterestTagIds?.join("、") || "不限" }}</ElDescriptionsItem><ElDescriptionsItem label="每日投放时段">{{ configuredAI(detail)?.dailyWindowStart && configuredAI(detail)?.dailyWindowEnd ? `${configuredAI(detail)?.dailyWindowStart}–${configuredAI(detail)?.dailyWindowEnd}（Asia/Kolkata）` : "全天" }}</ElDescriptionsItem><ElDescriptionsItem label="单瓶最大曝光">{{ configuredAI(detail)?.maxExposurePerBottle ?? "沿用漂流瓶基础上限" }}</ElDescriptionsItem></ElDescriptions><ElDivider>与当前发布版本对比</ElDivider><ElAlert v-if="!published" type="info" title="该类型尚无发布版本；以下列出本次配置值。" :closable="false" class="mb-3" /><ElAlert v-else type="info" :title="`比较基准：${published.version}`" :closable="false" class="mb-3" /><ElTable v-if="comparisonRows.length" :data="comparisonRows" border><ElTableColumn prop="field" label="字段" min-width="150" /><ElTableColumn prop="before" label="当前发布值" min-width="190" show-overflow-tooltip /><ElTableColumn prop="after" label="本次版本值" min-width="190" show-overflow-tooltip /></ElTable><ElAlert v-else type="success" title="与当前发布版本无字段差异" :closable="false" /></ElDrawer>
-  <ElDrawer v-model="editorOpen" :title="editingId === null ? '创建配置草稿' : `编辑草稿 #${editingId}`" size="55%"><ElForm label-width="150px"><ElFormItem label="配置类型"><ElSelect v-model="form.scope" :disabled="editingId !== null"><ElOption label="功能开关" value="feature_flags" /><ElOption label="审核规则与风险阈值" value="moderation_rules" /><ElOption label="AI 投放策略" value="ai_distribution" /></ElSelect></ElFormItem><ElFormItem label="版本号"><ElInput v-model="form.version" placeholder="例如 2026.09.24-1" /></ElFormItem><template v-if="form.scope === 'feature_flags'"><ElDivider>能力覆盖</ElDivider><ElFormItem v-for="[name, label] in flags" :key="name" :label="label"><ElSelect v-model="form.states[name]"><ElOption label="继承基础配置" value="inherit" /><ElOption label="开启（需基础配置支持）" value="true" /><ElOption label="关闭" value="false" /></ElSelect></ElFormItem></template><template v-else-if="form.scope === 'moderation_rules'"><ElFormItem label="拦截词"><ElInput v-model="form.blockedTerms" type="textarea" :rows="8" placeholder="每行一个拦截词" /></ElFormItem><ElFormItem label="附加正则"><ElInput v-model="form.regexRules" type="textarea" :rows="8" placeholder="每行一条 RE2 正则；固定安全规则始终生效" /></ElFormItem><ElFormItem label="附加拦截域名"><ElInput v-model="form.blockedDomains" type="textarea" :rows="5" placeholder="每行一个域名，如 example.xyz；同时拦截子域名" /></ElFormItem><ElFormItem label="短链域名"><ElInput v-model="form.shortlinkDomains" type="textarea" :rows="5" placeholder="每行一个域名，如 bit.ly；不带协议或路径" /></ElFormItem><ElDivider>供应商评分阈值</ElDivider><ElFormItem label="中风险起点"><ElInputNumber v-model="form.riskMedium" :min="0.01" :max="1" :step="0.01" :precision="2" /></ElFormItem><ElFormItem label="高风险起点"><ElInputNumber v-model="form.riskHigh" :min="0.01" :max="1" :step="0.01" :precision="2" /></ElFormItem><ElFormItem label="极高风险起点"><ElInputNumber v-model="form.riskCritical" :min="0.01" :max="1" :step="0.01" :precision="2" /></ElFormItem><ElFormItem label="低于该分数转人工"><ElInputNumber v-model="form.manualReviewBelow" :min="0" :max="1" :step="0.01" :precision="2" /></ElFormItem></template><template v-else><ElFormItem label="最高 AI 比例"><ElInputNumber v-model="form.maxPercent" :min="0" :max="20" /> %</ElFormItem><ElFormItem label="用户灰度比例"><ElInputNumber v-model="form.rolloutPercent" :min="0" :max="100" /> %</ElFormItem><ElFormItem label="语言覆盖"><ElInput v-model="form.languageOverrides" type="textarea" :rows="8" placeholder="每行如 hi=5；未列语言使用全局比例" /></ElFormItem><ElAlert title="兴趣标签留空表示不限；每日时段按 Asia/Kolkata 计算，开始含、结束不含，可跨午夜。单瓶最大曝光留空则沿用漂流瓶基础上限。" type="info" :closable="false" class="mb-4" /><ElFormItem label="目标兴趣标签 ID"><ElInput v-model="form.targetInterestTagIds" placeholder="逗号分隔；用户须命中至少一个" /></ElFormItem><ElFormItem label="每日开始时间"><ElInput v-model="form.dailyWindowStart" placeholder="HH:mm，留空表示全天" /></ElFormItem><ElFormItem label="每日结束时间"><ElInput v-model="form.dailyWindowEnd" placeholder="HH:mm，留空表示全天" /></ElFormItem><ElFormItem label="单瓶最大曝光"><ElInput v-model="form.maxExposurePerBottle" placeholder="累计被捞取次数上限；留空沿用基础上限" /></ElFormItem></template></ElForm><template #footer><ElButton @click="editorOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="save">保存草稿</ElButton></template></ElDrawer></div>
+  <AdminPage
+    title="版本化配置与审核规则"
+    description="管理能力配置和审核规则，追踪复核、发布及版本差异。"
+  >
+    <template #actions>
+      <ElButton v-if="canWrite" type="primary" @click="openEditor()">
+        创建草稿
+      </ElButton>
+</template><ElCard shadow="never">
+      <ElAlert
+        class="mb-4"
+        title="功能开关不能开启基础配置禁用的能力。附加审核词、正则、域名与短链规则在同步消息和异步文字瓶审核中生效，风险阈值用于异步文字瓶供应商评分；固定联系方式和外链规则始终有效。AI 投放默认 0%，单语种最高 20%；目标兴趣、每日时段和单瓶曝光上限也通过版本审批生效。发布与回滚均需异人审批；定时发布最多预约未来 30 天，每种类型只保留一个待发布版本。"
+        type="info"
+        show-icon
+        :closable="false"
+      />
+      <div class="admin-filter">
+        <ElSelect
+          v-model="scope"
+          clearable
+          placeholder="全部类型"
+          class="!w-40"
+        >
+          <ElOption label="功能开关" value="feature_flags" /><ElOption
+            label="审核规则与风险阈值"
+            value="moderation_rules"
+          /><ElOption label="AI 投放策略" value="ai_distribution" />
+</ElSelect><ElSelect
+          v-model="status"
+          clearable
+          placeholder="全部状态"
+          class="!w-36"
+        >
+          <ElOption label="草稿" value="draft" /><ElOption
+            label="待审批"
+            value="reviewing"
+          /><ElOption label="已批准" value="approved" /><ElOption
+            label="待定时发布"
+            value="scheduled"
+          /><ElOption label="已发布" value="published" /><ElOption
+            label="已退役"
+            value="retired"
+          />
+</ElSelect><ElButton type="primary" @click="search">查询</ElButton>
+      </div>
+      <ElTable v-loading="loading" :data="rows" row-key="versionId">
+        <ElTableColumn
+          prop="versionId"
+          label="ID"
+          width="85"
+        /><!-- @vue-generic {ConfigVersion} --><ElTableColumn
+          label="类型"
+          width="120"
+        >
+          <template #default="{ row }">
+            <AdminEnumTag :value="row.scope" :label="scopeText(row.scope)" />
+          </template>
+</ElTableColumn><ElTableColumn
+          prop="version"
+          label="版本"
+          min-width="125"
+        /><!-- @vue-generic {ConfigVersion} --><ElTableColumn
+          label="状态"
+          width="120"
+        >
+          <template #default="{ row }">
+            <AdminEnumTag :value="row.status" :label="statusText(row.status)" />
+          </template>
+</ElTableColumn><ElTableColumn
+          prop="requestedBy"
+          label="申请人"
+          width="95"
+        /><ElTableColumn
+          prop="reviewedBy"
+          label="审批人"
+          width="95"
+        /><!-- @vue-generic {ConfigVersion} --><ElTableColumn
+          label="预约发布时间"
+          min-width="235"
+        >
+          <template #default="{ row }">
+            <AdminTime :value="row.scheduledAt" />
+          </template>
+</ElTableColumn><ElTableColumn
+          prop="rollbackOf"
+          label="回滚来源"
+          width="100"
+        /><!-- @vue-generic {ConfigVersion} --><ElTableColumn
+          prop="updatedAt"
+          label="更新时间"
+          min-width="185"
+        >
+          <template #default="{ row }">
+            <AdminTime :value="row.updatedAt" />
+          </template>
+</ElTableColumn><!-- @vue-generic {ConfigVersion} --><ElTableColumn
+          label="操作"
+          min-width="310"
+          fixed="right"
+        >
+          <template #default="{ row }">
+            <ElButton link type="primary" @click="openDetail(row)">
+              详情
+</ElButton><ElButton
+              v-if="
+                canWrite &&
+                row.status === 'draft' &&
+                row.requestedBy === currentUserId
+              "
+              link
+              type="primary"
+              @click="openEditor(row)"
+            >
+              编辑
+</ElButton><ElButton
+              v-if="
+                canWrite &&
+                row.status === 'draft' &&
+                row.requestedBy === currentUserId
+              "
+              link
+              type="success"
+              @click="action(row, 'submit')"
+            >
+              提交
+</ElButton><ElButton
+              v-if="
+                canApprove &&
+                row.status === 'reviewing' &&
+                row.requestedBy !== currentUserId
+              "
+              link
+              type="success"
+              @click="action(row, 'approve')"
+            >
+              批准
+</ElButton><ElButton
+              v-if="
+                canApprove &&
+                row.status === 'reviewing' &&
+                row.requestedBy !== currentUserId
+              "
+              link
+              type="warning"
+              @click="action(row, 'reject')"
+            >
+              驳回
+</ElButton><ElButton
+              v-if="canPublish && row.status === 'approved'"
+              link
+              type="success"
+              @click="action(row, 'publish')"
+            >
+              发布
+</ElButton><ElButton
+              v-if="canPublish && row.status === 'approved'"
+              link
+              type="primary"
+              @click="action(row, 'schedule')"
+            >
+              定时发布
+</ElButton><ElButton
+              v-if="canPublish && row.status === 'scheduled'"
+              link
+              type="warning"
+              @click="action(row, 'cancel_schedule')"
+            >
+              取消定时
+</ElButton><ElButton
+              v-if="canWrite && ['published', 'retired'].includes(row.status)"
+              link
+              type="warning"
+              @click="action(row, 'rollback')"
+            >
+              回滚草稿
+            </ElButton>
+          </template>
+        </ElTableColumn>
+      </ElTable>
+      <div class="admin-pagination">
+        <ElButton :disabled="cursorStack.length === 0" @click="previous">
+          上一页
+</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
+      </div>
+</ElCard><ElDrawer
+      v-model="detailOpen"
+      title="配置版本详情"
+      size="55%"
+      @closed="detail = null"
+    >
+      <ElDescriptions v-if="detail" :column="2" border>
+        <ElDescriptionsItem label="类型">
+          <AdminEnumTag
+            :value="detail.scope"
+            :label="scopeText(detail.scope)"
+          />
+</ElDescriptionsItem><ElDescriptionsItem label="版本">
+          {{ detail.version }}
+</ElDescriptionsItem><ElDescriptionsItem label="状态">
+          <AdminEnumTag
+            :value="detail.status"
+            :label="statusText(detail.status)"
+          />
+</ElDescriptionsItem><ElDescriptionsItem label="申请人">
+          {{ detail.requestedBy }}
+</ElDescriptionsItem><ElDescriptionsItem label="审批人">
+          {{ detail.reviewedBy ?? '—' }}
+</ElDescriptionsItem><ElDescriptionsItem label="审批说明">
+          {{ detail.reviewNote || '—' }}
+</ElDescriptionsItem><ElDescriptionsItem label="定时发布">
+          <AdminTime :value="detail.scheduledAt" /><span
+            v-if="detail.scheduledAt"
+            class="ml-2 text-gray-500"
+            >UTC {{ detail.scheduledAt }}</span>
+</ElDescriptionsItem><ElDescriptionsItem label="预约人">
+          {{ detail.scheduledBy ?? '—' }}
+</ElDescriptionsItem><ElDescriptionsItem label="回滚来源">
+          {{ detail.rollbackOf ?? '—' }}
+        </ElDescriptionsItem>
+</ElDescriptions><ElDivider>
+        {{
+          detail?.scope === 'feature_flags'
+            ? '能力配置'
+            : detail?.scope === 'moderation_rules'
+              ? '附加审核规则'
+              : 'AI 投放规则'
+        }}
+</ElDivider><ElDescriptions
+        v-if="detail?.scope === 'feature_flags'"
+        :column="1"
+        border
+      >
+        <ElDescriptionsItem
+          v-for="[name, label] in flags"
+          :key="name"
+          :label="label"
+        >
+          <AdminEnumTag
+            :value="
+              configuredFlags(detail)[name] === undefined
+                ? 'inherited'
+                : configuredFlags(detail)[name]
+            "
+            :label="
+              configuredFlags(detail)[name] === undefined
+                ? '继承基础配置'
+                : configuredFlags(detail)[name]
+                  ? '开启'
+                  : '关闭'
+            "
+          />
+        </ElDescriptionsItem>
+      </ElDescriptions>
+      <div v-else-if="detail?.scope === 'moderation_rules'">
+        <ElDivider>附加拦截词</ElDivider>
+        <div class="flex flex-wrap gap-2">
+          <ElTag v-for="term in configuredTerms(detail)" :key="term">
+            {{ term }}
+</ElTag><span v-if="!configuredTerms(detail).length">无</span>
+        </div>
+        <ElDivider>附加正则</ElDivider>
+        <div
+          v-for="pattern in configuredPatterns(detail)"
+          :key="pattern"
+          class="mb-2 break-all font-mono"
+        >
+          {{ pattern }}
+        </div>
+        <span v-if="!configuredPatterns(detail).length">无</span><ElDivider>附加拦截域名</ElDivider>
+        <div class="flex flex-wrap gap-2">
+          <ElTag
+            v-for="domain in configuredDomains(detail, 'blockedDomains')"
+            :key="domain"
+          >
+            {{ domain }}
+</ElTag><span v-if="!configuredDomains(detail, 'blockedDomains').length">无</span>
+        </div>
+        <ElDivider>短链域名</ElDivider>
+        <div class="flex flex-wrap gap-2">
+          <ElTag
+            v-for="domain in configuredDomains(detail, 'shortlinkDomains')"
+            :key="domain"
+          >
+            {{ domain }}
+</ElTag><span v-if="!configuredDomains(detail, 'shortlinkDomains').length">无</span>
+        </div>
+        <ElDivider>风险阈值</ElDivider><ElDescriptions :column="1" border>
+          <ElDescriptionsItem label="中风险起点">
+            {{
+              configuredThresholds(detail)?.medium ?? 0.4
+            }}
+</ElDescriptionsItem><ElDescriptionsItem label="高风险起点">
+            {{ configuredThresholds(detail)?.high ?? 0.7 }}
+</ElDescriptionsItem><ElDescriptionsItem label="极高风险起点">
+            {{
+              configuredThresholds(detail)?.critical ?? 0.9
+            }}
+</ElDescriptionsItem><ElDescriptionsItem label="低于该分数转人工">
+            {{ configuredThresholds(detail)?.manualReviewBelow ?? 0.7 }}
+          </ElDescriptionsItem>
+        </ElDescriptions>
+      </div>
+      <ElDescriptions
+        v-else-if="detail && configuredAI(detail)"
+        :column="1"
+        border
+      >
+        <ElDescriptionsItem label="全局最高比例">
+          {{ configuredAI(detail)?.maxPercent }}%
+</ElDescriptionsItem><ElDescriptionsItem label="用户灰度比例">
+          {{ configuredAI(detail)?.rolloutPercent }}%
+</ElDescriptionsItem><ElDescriptionsItem label="语言覆盖">
+          {{
+            JSON.stringify(configuredAI(detail)?.languageOverrides || {})
+          }}
+</ElDescriptionsItem><ElDescriptionsItem label="目标兴趣标签">
+          {{
+            configuredAI(detail)?.targetInterestTagIds?.join('、') || '不限'
+          }}
+</ElDescriptionsItem><ElDescriptionsItem label="每日投放时段">
+          {{
+            configuredAI(detail)?.dailyWindowStart &&
+            configuredAI(detail)?.dailyWindowEnd
+              ? `${configuredAI(detail)?.dailyWindowStart}–${configuredAI(detail)?.dailyWindowEnd}（Asia/Kolkata）`
+              : '全天'
+          }}
+</ElDescriptionsItem><ElDescriptionsItem label="单瓶最大曝光">
+          {{
+            configuredAI(detail)?.maxExposurePerBottle ?? '沿用漂流瓶基础上限'
+          }}
+        </ElDescriptionsItem>
+</ElDescriptions><ElDivider>与当前发布版本对比</ElDivider><ElAlert
+        v-if="!published"
+        type="info"
+        title="该类型尚无发布版本；以下列出本次配置值。"
+        :closable="false"
+        class="mb-3"
+      /><ElAlert
+        v-else
+        type="info"
+        :title="`比较基准：${published.version}`"
+        :closable="false"
+        class="mb-3"
+      /><ElTable v-if="comparisonRows.length" :data="comparisonRows" border>
+        <ElTableColumn
+          prop="field"
+          label="字段"
+          min-width="150"
+        /><ElTableColumn
+          prop="before"
+          label="当前发布值"
+          min-width="190"
+          show-overflow-tooltip
+        /><ElTableColumn
+          prop="after"
+          label="本次版本值"
+          min-width="190"
+          show-overflow-tooltip
+        />
+</ElTable><ElAlert
+        v-else
+        type="success"
+        title="与当前发布版本无字段差异"
+        :closable="false"
+      />
+    </ElDrawer>
+    <ElDrawer
+      v-model="editorOpen"
+      :title="editingId === null ? '创建配置草稿' : `编辑草稿 #${editingId}`"
+      size="55%"
+    >
+      <ElForm label-width="150px">
+        <ElFormItem label="配置类型">
+          <ElSelect v-model="form.scope" :disabled="editingId !== null">
+            <ElOption label="功能开关" value="feature_flags" /><ElOption
+              label="审核规则与风险阈值"
+              value="moderation_rules"
+            /><ElOption label="AI 投放策略" value="ai_distribution" />
+          </ElSelect>
+</ElFormItem><ElFormItem label="版本号">
+          <ElInput
+            v-model="form.version"
+            placeholder="例如 2026.09.24-1"
+          />
+</ElFormItem><template v-if="form.scope === 'feature_flags'">
+          <ElDivider>能力覆盖</ElDivider><ElFormItem
+            v-for="[name, label] in flags"
+            :key="name"
+            :label="label"
+          >
+            <ElSelect v-model="form.states[name]">
+              <ElOption label="继承基础配置" value="inherit" /><ElOption
+                label="开启（需基础配置支持）"
+                value="true"
+              /><ElOption label="关闭" value="false" />
+            </ElSelect>
+          </ElFormItem>
+</template><template v-else-if="form.scope === 'moderation_rules'">
+          <ElFormItem label="拦截词">
+            <ElInput
+              v-model="form.blockedTerms"
+              type="textarea"
+              :rows="8"
+              placeholder="每行一个拦截词"
+            />
+</ElFormItem><ElFormItem label="附加正则">
+            <ElInput
+              v-model="form.regexRules"
+              type="textarea"
+              :rows="8"
+              placeholder="每行一条 RE2 正则；固定安全规则始终生效"
+            />
+</ElFormItem><ElFormItem label="附加拦截域名">
+            <ElInput
+              v-model="form.blockedDomains"
+              type="textarea"
+              :rows="5"
+              placeholder="每行一个域名，如 example.xyz；同时拦截子域名"
+            />
+</ElFormItem><ElFormItem label="短链域名">
+            <ElInput
+              v-model="form.shortlinkDomains"
+              type="textarea"
+              :rows="5"
+              placeholder="每行一个域名，如 bit.ly；不带协议或路径"
+            />
+</ElFormItem><ElDivider>供应商评分阈值</ElDivider><ElFormItem label="中风险起点">
+            <ElInputNumber
+              v-model="form.riskMedium"
+              :min="0.01"
+              :max="1"
+              :step="0.01"
+              :precision="2"
+            />
+</ElFormItem><ElFormItem label="高风险起点">
+            <ElInputNumber
+              v-model="form.riskHigh"
+              :min="0.01"
+              :max="1"
+              :step="0.01"
+              :precision="2"
+            />
+</ElFormItem><ElFormItem label="极高风险起点">
+            <ElInputNumber
+              v-model="form.riskCritical"
+              :min="0.01"
+              :max="1"
+              :step="0.01"
+              :precision="2"
+            />
+</ElFormItem><ElFormItem label="低于该分数转人工">
+            <ElInputNumber
+              v-model="form.manualReviewBelow"
+              :min="0"
+              :max="1"
+              :step="0.01"
+              :precision="2"
+            />
+          </ElFormItem>
+</template><template v-else>
+          <ElFormItem label="最高 AI 比例">
+            <ElInputNumber v-model="form.maxPercent" :min="0" :max="20" />
+            %
+</ElFormItem><ElFormItem label="用户灰度比例">
+            <ElInputNumber v-model="form.rolloutPercent" :min="0" :max="100" />
+            %
+</ElFormItem><ElFormItem label="语言覆盖">
+            <ElInput
+              v-model="form.languageOverrides"
+              type="textarea"
+              :rows="8"
+              placeholder="每行如 hi=5；未列语言使用全局比例"
+            />
+</ElFormItem><ElAlert
+            title="兴趣标签留空表示不限；每日时段按 Asia/Kolkata 计算，开始含、结束不含，可跨午夜。单瓶最大曝光留空则沿用漂流瓶基础上限。"
+            type="info"
+            :closable="false"
+            class="mb-4"
+          /><ElFormItem label="目标兴趣标签 ID">
+            <ElInput
+              v-model="form.targetInterestTagIds"
+              placeholder="逗号分隔；用户须命中至少一个"
+            />
+</ElFormItem><ElFormItem label="每日开始时间">
+            <ElInput
+              v-model="form.dailyWindowStart"
+              placeholder="HH:mm，留空表示全天"
+            />
+</ElFormItem><ElFormItem label="每日结束时间">
+            <ElInput
+              v-model="form.dailyWindowEnd"
+              placeholder="HH:mm，留空表示全天"
+            />
+</ElFormItem><ElFormItem label="单瓶最大曝光">
+            <ElInput
+              v-model="form.maxExposurePerBottle"
+              placeholder="累计被捞取次数上限；留空沿用基础上限"
+            />
+          </ElFormItem>
+        </template>
+</ElForm><template #footer>
+        <ElButton @click="editorOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="save">
+          保存草稿
+        </ElButton>
+      </template>
+    </ElDrawer>
+  </AdminPage>
 </template>

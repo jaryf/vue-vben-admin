@@ -8,6 +8,7 @@ export * from './icon-picker';
 export * from './json-viewer';
 export * from './loading';
 export * from './page';
+export * from './qr-code';
 export * from './resize';
 export * from './tippy';
 export * from './tree';

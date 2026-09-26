@@ -1,3 +1,5 @@
+import type { RequestResponse } from '@vben/request';
+
 import { useAccessStore } from '@vben/stores';
 
 import { baseRequestClient, requestClient } from '#/api/request';
@@ -35,7 +37,7 @@ export async function loginApi(data: AuthApi.LoginParams) {
  * 刷新accessToken
  */
 export async function refreshTokenApi() {
-  return baseRequestClient.post<AuthApi.RefreshTokenResult>(
+  return baseRequestClient.post<RequestResponse<AuthApi.RefreshTokenResult>>(
     '/system/auth/refresh',
     undefined,
     {
@@ -87,7 +89,8 @@ export interface AdminSecurityEvent {
 }
 export const listCurrentAdminSecurityEventsApi = (cursor?: string) =>
   requestClient.get<{ items: AdminSecurityEvent[]; nextCursor: null | string }>(
-    '/system/auth/security-events', { params: { cursor } },
+    '/system/auth/security-events',
+    { params: { cursor } },
   );
 
 /**
@@ -109,10 +112,20 @@ export interface MFASetup {
   expiresIn: number;
 }
 
-export const getMFAStatusApi = () => requestClient.get<MFAStatus>('/system/auth/mfa/status');
+export const getMFAStatusApi = () =>
+  requestClient.get<MFAStatus>('/system/auth/mfa/status');
 export const setupMFAApi = (currentPassword: string) =>
   requestClient.post<MFASetup>('/system/auth/mfa/setup', { currentPassword });
 export const enableMFAApi = (currentPassword: string, totpCode: string) =>
-  requestClient.post<{ recoveryCodes: string[] }>('/system/auth/mfa/enable', { currentPassword, totpCode });
-export const regenerateRecoveryCodesApi = (currentPassword: string, totpCode: string) =>
-  requestClient.post<{ recoveryCodes: string[] }>('/system/auth/mfa/recovery-codes', { currentPassword, totpCode });
+  requestClient.post<{ recoveryCodes: string[] }>('/system/auth/mfa/enable', {
+    currentPassword,
+    totpCode,
+  });
+export const regenerateRecoveryCodesApi = (
+  currentPassword: string,
+  totpCode: string,
+) =>
+  requestClient.post<{ recoveryCodes: string[] }>(
+    '/system/auth/mfa/recovery-codes',
+    { currentPassword, totpCode },
+  );
