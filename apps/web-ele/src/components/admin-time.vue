@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import {computed} from 'vue';
 
-import { useTimezoneStore } from '@vben/stores';
+import {useTimezoneStore} from '@vben/stores';
 
 const props = defineProps<{ value?: Date | null | number | string }>();
 const timezoneStore = useTimezoneStore();
@@ -10,7 +10,8 @@ const instant = computed(() => {
   if (props.value === null || props.value === undefined || props.value === '') {
     return null;
   }
-  const parsed = props.value instanceof Date ? props.value : new Date(props.value);
+  const parsed =
+    props.value instanceof Date ? props.value : new Date(props.value);
   return Number.isFinite(parsed.getTime()) ? parsed : null;
 });
 const timezone = computed(() => timezoneStore.timezone || 'Asia/Kolkata');
@@ -35,12 +36,20 @@ const localTime = computed(() => {
     second: '2-digit',
     hourCycle: 'h23',
   }).formatToParts(instant.value);
-  const values = Object.fromEntries(parts.map(({ type, value }) => [type, value]));
+  const values = Object.fromEntries(
+    parts.map(({type, value}) => [type, value]),
+  );
   return `${values.year}-${values.month}-${values.day} ${values.hour}:${values.minute}:${values.second}`;
 });
 </script>
 
 <template>
-  <time v-if="instant" class="cursor-help underline decoration-dotted underline-offset-2" :datetime="utcTime" :title="`显示时区：${displayTimezone}；UTC：${utcTime}`">{{ localTime }}</time>
+  <time
+    v-if="instant"
+    :datetime="utcTime"
+    :title="`显示时区：${displayTimezone}；UTC：${utcTime}`"
+    class="cursor-help underline decoration-dotted underline-offset-2"
+  >{{ localTime }}
+  </time>
   <span v-else>—</span>
 </template>

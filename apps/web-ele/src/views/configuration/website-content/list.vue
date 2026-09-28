@@ -1,9 +1,18 @@
 <script setup lang="ts">
-import type { WebsiteContentVersion } from '#/api/website-content';
+import type {WebsiteContentVersion} from '#/api/website-content';
+import {
+  createWebsiteContent,
+  getWebsiteContent,
+  listWebsiteContent,
+  publishWebsiteContent,
+  retireWebsiteContent,
+  reviewWebsiteContent,
+  updateWebsiteContent,
+} from '#/api/website-content';
 
-import { computed, onMounted, reactive, ref } from 'vue';
+import {computed, onMounted, reactive, ref} from 'vue';
 
-import { useAccess } from '@vben/access';
+import {useAccess} from '@vben/access';
 
 import {
   ElAlert,
@@ -22,21 +31,11 @@ import {
   ElTable,
   ElTableColumn,
 } from 'element-plus';
-
-import {
-  createWebsiteContent,
-  getWebsiteContent,
-  listWebsiteContent,
-  publishWebsiteContent,
-  retireWebsiteContent,
-  reviewWebsiteContent,
-  updateWebsiteContent,
-} from '#/api/website-content';
 import AdminEnumTag from '#/components/admin-enum-tag.vue';
 import AdminPage from '#/components/admin-page.vue';
 import AdminTime from '#/components/admin-time.vue';
 import SafeMarkdownPreview from '#/components/safe-markdown-preview.vue';
-import { confirmDialog } from '#/utils/message-box';
+import {confirmDialog} from '#/utils/message-box';
 
 const { hasAccessByCodes } = useAccess();
 const canWrite = computed(() => hasAccessByCodes(['website_content.write']));
@@ -216,7 +215,8 @@ onMounted(() => {
       <ElButton v-if="canWrite" type="primary" @click="openEditor()">
         创建草稿
       </ElButton>
-</template><ElCard shadow="never">
+    </template>
+    <ElCard shadow="never">
       <ElAlert
         title="本轮提供内容后台和已发布内容公共 API；官网前端尚未接入。只有已复核并发布的版本会出现在公共 API。"
         type="info"
@@ -235,7 +235,8 @@ onMounted(() => {
             label="帮助文章"
             value="help_article"
           />
-</ElSelect><ElInput
+        </ElSelect>
+        <ElInput
           v-model="filter.slug"
           placeholder="路径标识"
           clearable
@@ -259,8 +260,10 @@ onMounted(() => {
           <ElOption label="草稿" value="draft" /><ElOption
             label="已发布"
             value="published"
-          /><ElOption label="已退役" value="retired" />
-</ElSelect><ElButton type="primary" @click="search">查询</ElButton>
+      />
+        <ElOption label="已退役" value="retired"/>
+      </ElSelect>
+        <ElButton type="primary" @click="search">查询</ElButton>
       </div>
       <ElTable v-loading="loading" :data="rows" row-key="versionId">
         <ElTableColumn
@@ -277,7 +280,8 @@ onMounted(() => {
               :label="typeText(row.contentType)"
             />
           </template>
-</ElTableColumn><ElTableColumn
+      </ElTableColumn>
+        <ElTableColumn
           prop="slug"
           label="路径标识"
           min-width="145"
@@ -300,7 +304,8 @@ onMounted(() => {
           <template #default="{ row }">
             <AdminEnumTag :value="row.status" :label="statusText(row.status)" />
           </template>
-</ElTableColumn><ElTableColumn
+      </ElTableColumn>
+        <ElTableColumn
           prop="reviewedBy"
           label="复核人"
           width="90"
@@ -312,36 +317,37 @@ onMounted(() => {
           <template #default="{ row }">
             <AdminTime :value="row.updatedAt" />
           </template>
-</ElTableColumn><!-- @vue-generic {WebsiteContentVersion} --><ElTableColumn
-          label="操作"
-          min-width="235"
-          fixed="right"
-        >
+      </ElTableColumn><!-- @vue-generic {WebsiteContentVersion} -->
+        <ElTableColumn fixed="right" label="操作" min-width="235">
           <template #default="{ row }">
             <ElButton link type="primary" @click="openDetail(row)">
               详情
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="canWrite && row.status === 'draft'"
               link
               type="primary"
               @click="openEditor(row)"
             >
               编辑
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="canReview && row.status === 'draft'"
               link
               type="success"
               @click="action(row, 'review')"
             >
               复核
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="canPublish && row.status === 'draft' && row.reviewedBy"
               link
               type="success"
               @click="action(row, 'publish')"
             >
               发布
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="canPublish && row.status === 'published'"
               link
               type="warning"
@@ -355,31 +361,42 @@ onMounted(() => {
       <div class="admin-pagination">
         <ElButton :disabled="cursorStack.length === 0" @click="previous">
           上一页
-</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
+        </ElButton>
+        <ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
       </div>
-</ElCard><ElDrawer
+    </ElCard>
+    <ElDrawer
       v-model="detailOpen"
       title="内容版本详情"
       size="65%"
       @closed="detail = null"
     >
       <ElDescriptions v-if="detail" :column="2" border>
-        <ElDescriptionsItem label="路径">{{ detail.slug }}</ElDescriptionsItem><ElDescriptionsItem label="语言">
+        <ElDescriptionsItem label="路径">{{ detail.slug }}</ElDescriptionsItem>
+        <ElDescriptionsItem label="语言">
           {{ detail.languageCode }}
-</ElDescriptionsItem><ElDescriptionsItem label="类型">
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="类型">
           <AdminEnumTag
             :value="detail.contentType"
             :label="typeText(detail.contentType)"
           />
-</ElDescriptionsItem><ElDescriptionsItem label="版本">
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="版本">
           {{ detail.version }}
-</ElDescriptionsItem><ElDescriptionsItem label="标题">{{ detail.title }}</ElDescriptionsItem><ElDescriptionsItem label="状态">
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="标题">
+          {{ detail.title }}
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="状态">
           <AdminEnumTag
             :value="detail.status"
             :label="statusText(detail.status)"
           />
         </ElDescriptionsItem>
-</ElDescriptions><ElDivider>Markdown 安全预览</ElDivider><ElAlert
+      </ElDescriptions>
+      <ElDivider>Markdown 安全预览</ElDivider>
+      <ElAlert
         v-if="detail"
         class="mb-4"
         title="原始 HTML 已禁用，HTML 标签只会作为文本显示。"
@@ -401,26 +418,32 @@ onMounted(() => {
               value="help_article"
             />
           </ElSelect>
-</ElFormItem><ElFormItem label="路径标识">
+        </ElFormItem>
+        <ElFormItem label="路径标识">
           <ElInput
             v-model="form.slug"
             :disabled="editingId !== null"
             placeholder="小写字母、数字和连字符"
           />
-</ElFormItem><ElFormItem label="语言代码">
-          <ElInput
-            v-model="form.languageCode"
-            :disabled="editingId !== null"
-          />
-</ElFormItem><ElFormItem label="版本"><ElInput v-model="form.version" /></ElFormItem><ElFormItem label="标题"><ElInput v-model="form.title" /></ElFormItem><ElFormItem label="Markdown">
-          <ElInput
-            v-model="form.bodyMarkdown"
-            type="textarea"
-            :rows="18"
-          />
-</ElFormItem><ElDivider>安全预览</ElDivider><SafeMarkdownPreview :source="form.bodyMarkdown" />
-</ElForm><template #footer>
-        <ElButton @click="editorOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="save">
+        </ElFormItem>
+        <ElFormItem label="语言代码">
+          <ElInput v-model="form.languageCode" :disabled="editingId !== null"/>
+        </ElFormItem>
+        <ElFormItem label="版本">
+          <ElInput v-model="form.version"/>
+        </ElFormItem>
+        <ElFormItem label="标题">
+          <ElInput v-model="form.title"/>
+        </ElFormItem>
+        <ElFormItem label="Markdown">
+          <ElInput v-model="form.bodyMarkdown" :rows="18" type="textarea"/>
+        </ElFormItem>
+        <ElDivider>安全预览</ElDivider>
+        <SafeMarkdownPreview :source="form.bodyMarkdown"/>
+      </ElForm>
+      <template #footer>
+        <ElButton @click="editorOpen = false">取消</ElButton>
+        <ElButton :loading="saving" type="primary" @click="save">
           保存草稿
         </ElButton>
       </template>

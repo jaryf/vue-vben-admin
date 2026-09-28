@@ -1,6 +1,9 @@
 const DATA_EXPORT_DATASET_CONFIG = {
   audit_logs: { label: '审计日志元数据', permissions: ['audit_log.read'] },
-  finance_reviews: { label: '财务异常元数据', permissions: ['finance_review.read'] },
+  finance_reviews: {
+    label: '财务异常元数据',
+    permissions: ['finance_review.read'],
+  },
   orders: { label: '订单', permissions: ['order.read'] },
   payment_transactions: { label: '支付交易', permissions: ['order.read'] },
   subscriptions: { label: '订阅', permissions: ['order.read'] },
@@ -41,13 +44,19 @@ const DATA_EXPORT_DATASET_CONFIG = {
   },
   messages: { label: '消息元数据', permissions: ['message.read_context'] },
   content_reviews: { label: '审核记录', permissions: ['moderation.review'] },
-  review_evidence: { label: '脱敏审核证据', permissions: ['moderation.review'] },
+  review_evidence: {
+    label: '脱敏审核证据',
+    permissions: ['moderation.review'],
+  },
   ai_roles: { label: 'AI 角色配置', permissions: ['ai_role.manage'] },
   ai_generation_batches: {
     label: 'AI 生成批次',
     permissions: ['ai_content.publish'],
   },
-  ai_generation_items: { label: 'AI 生成项', permissions: ['ai_content.publish'] },
+  ai_generation_items: {
+    label: 'AI 生成项',
+    permissions: ['ai_content.publish'],
+  },
   ai_reply_tasks: { label: 'AI 回复任务', permissions: ['ai_content.publish'] },
   contact_requests: {
     label: '官网联系请求（敏感）',

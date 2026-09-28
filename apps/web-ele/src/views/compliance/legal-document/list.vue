@@ -1,14 +1,19 @@
 <script setup lang="ts">
-import type {
-  LegalDetail,
-  LegalTranslation,
-  LegalVersion,
+import type {LegalDetail, LegalTranslation, LegalVersion,} from '#/api/legal-documents';
+import {
+  createLegalVersion,
+  getLegalVersion,
+  listLegalVersions,
+  publishLegalVersion,
+  retireLegalVersion,
+  reviewLegalVersion,
+  updateLegalVersion,
 } from '#/api/legal-documents';
 
-import { computed, onMounted, reactive, ref } from 'vue';
+import {computed, onMounted, reactive, ref} from 'vue';
 
-import { useAccess } from '@vben/access';
-import { useTimezoneStore, useUserStore } from '@vben/stores';
+import {useAccess} from '@vben/access';
+import {useTimezoneStore, useUserStore} from '@vben/stores';
 
 import {
   ElAlert,
@@ -29,22 +34,12 @@ import {
   ElTableColumn,
   ElTooltip,
 } from 'element-plus';
-
-import {
-  createLegalVersion,
-  getLegalVersion,
-  listLegalVersions,
-  publishLegalVersion,
-  retireLegalVersion,
-  reviewLegalVersion,
-  updateLegalVersion,
-} from '#/api/legal-documents';
 import AdminEnumTag from '#/components/admin-enum-tag.vue';
 import AdminPage from '#/components/admin-page.vue';
 import AdminTime from '#/components/admin-time.vue';
 import SafeMarkdownPreview from '#/components/safe-markdown-preview.vue';
-import { adminDateTimeToUtc, utcToAdminDateTime } from '#/utils/admin-datetime';
-import { confirmDialog } from '#/utils/message-box';
+import {adminDateTimeToUtc, utcToAdminDateTime} from '#/utils/admin-datetime';
+import {confirmDialog} from '#/utils/message-box';
 
 const { hasAccessByCodes } = useAccess();
 const userStore = useUserStore();
@@ -226,7 +221,8 @@ onMounted(() => {
       <ElButton v-if="canWrite" type="primary" @click="openEditor()">
         创建草稿
       </ElButton>
-</template><ElCard shadow="never">
+    </template>
+    <ElCard shadow="never">
       <div class="admin-filter">
         <ElSelect
           v-model="filter.documentType"
@@ -240,7 +236,8 @@ onMounted(() => {
             :label="label"
             :value="value"
           />
-</ElSelect><ElSelect
+        </ElSelect>
+        <ElSelect
           v-model="filter.status"
           clearable
           placeholder="全部状态"
@@ -249,8 +246,10 @@ onMounted(() => {
           <ElOption label="草稿" value="draft" /><ElOption
             label="已发布"
             value="published"
-          /><ElOption label="已退役" value="retired" />
-</ElSelect><ElButton type="primary" @click="search">查询</ElButton>
+        />
+          <ElOption label="已退役" value="retired"/>
+        </ElSelect>
+        <ElButton type="primary" @click="search">查询</ElButton>
       </div>
       <ElTable v-loading="loading" :data="rows" row-key="versionId">
         <ElTableColumn
@@ -267,7 +266,8 @@ onMounted(() => {
               :label="typeText(row.documentType)"
             />
           </template>
-</ElTableColumn><ElTableColumn
+      </ElTableColumn>
+        <ElTableColumn
           prop="version"
           label="版本"
           min-width="125"
@@ -278,14 +278,13 @@ onMounted(() => {
           <template #default="{ row }">
             <AdminEnumTag :value="row.status" :label="statusText(row.status)" />
           </template>
-</ElTableColumn><!-- @vue-generic {LegalVersion} --><ElTableColumn
-          label="翻译语言"
-          min-width="145"
-        >
+      </ElTableColumn><!-- @vue-generic {LegalVersion} -->
+        <ElTableColumn label="翻译语言" min-width="145">
           <template #default="{ row }">
             {{ row.translationLanguages?.join('、') || '—' }}
           </template>
-</ElTableColumn><ElTableColumn
+        </ElTableColumn>
+        <ElTableColumn
           prop="reviewedBy"
           label="复核管理员"
           width="115"
@@ -297,29 +296,29 @@ onMounted(() => {
           <template #default="{ row }">
             <AdminTime :value="row.effectiveAt" />
           </template>
-</ElTableColumn><!-- @vue-generic {LegalVersion} --><ElTableColumn
-          label="操作"
-          min-width="240"
-          fixed="right"
-        >
+      </ElTableColumn><!-- @vue-generic {LegalVersion} -->
+        <ElTableColumn fixed="right" label="操作" min-width="240">
           <template #default="{ row }">
             <ElButton link type="primary" @click="openDetail(row)">
               详情
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="canWrite && row.status === 'draft'"
               link
               type="primary"
               @click="openEditor(row)"
             >
               编辑
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="canReview && row.status === 'draft'"
               link
               type="success"
               @click="action(row, 'review')"
             >
               复核
-</ElButton><ElTooltip
+            </ElButton>
+            <ElTooltip
               v-if="canPublish && row.status === 'draft'"
               :disabled="!publishBlockedReason(row)"
               :content="publishBlockedReason(row)"
@@ -331,7 +330,8 @@ onMounted(() => {
                   :disabled="!!publishBlockedReason(row)"
                   @click="action(row, 'publish')"
                   >发布</ElButton></span>
-</ElTooltip><ElButton
+            </ElTooltip>
+            <ElButton
               v-if="canPublish && row.status === 'published'"
               link
               type="warning"
@@ -345,7 +345,8 @@ onMounted(() => {
       <div class="admin-pagination">
         <ElButton :disabled="cursorStack.length === 0" @click="previous">
           上一页
-</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
+        </ElButton>
+        <ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
       </div>
     </ElCard>
     <ElDrawer
@@ -361,17 +362,21 @@ onMounted(() => {
               :value="detail.version.documentType"
               :label="typeText(detail.version.documentType)"
             />
-</ElDescriptionsItem><ElDescriptionsItem label="版本">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="版本">
             {{ detail.version.version }}
-</ElDescriptionsItem><ElDescriptionsItem label="状态">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="状态">
             <AdminEnumTag
               :value="detail.version.status"
               :label="statusText(detail.version.status)"
             />
-</ElDescriptionsItem><ElDescriptionsItem label="生效时间">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="生效时间">
             <AdminTime :value="detail.version.effectiveAt" />
           </ElDescriptionsItem>
-</ElDescriptions><ElAlert
+        </ElDescriptions>
+        <ElAlert
           class="mt-4"
           title="安全 Markdown 预览已禁用原始 HTML；HTML 标签只会作为文本显示。"
           type="info"
@@ -385,7 +390,8 @@ onMounted(() => {
         >
           <ElDivider>
             {{ translation.languageCode }} · {{ translation.title }}
-</ElDivider><SafeMarkdownPreview :source="translation.bodyMarkdown" />
+          </ElDivider>
+          <SafeMarkdownPreview :source="translation.bodyMarkdown"/>
         </div>
       </template>
     </ElDrawer>
@@ -406,9 +412,11 @@ onMounted(() => {
               :value="value"
             />
           </ElSelect>
-</ElFormItem><ElFormItem label="版本">
+        </ElFormItem>
+        <ElFormItem label="版本">
           <ElInput v-model="form.version" maxlength="64" />
-</ElFormItem><ElFormItem label="生效时间">
+        </ElFormItem>
+        <ElFormItem label="生效时间">
           <ElDatePicker
             v-model="form.effectiveAt"
             type="datetime"
@@ -416,14 +424,16 @@ onMounted(() => {
           /><span class="ml-3 text-xs text-gray-500">{{
             timezoneStore.timezone
           }}</span>
-</ElFormItem><ElDivider>翻译内容</ElDivider>
+        </ElFormItem>
+        <ElDivider>翻译内容</ElDivider>
         <div
           v-for="(translation, index) in form.translations"
           :key="index"
           class="mb-5 rounded border p-4"
         >
           <div class="mb-3 flex justify-between">
-            <strong>翻译 {{ index + 1 }}</strong><ElButton
+            <strong>翻译 {{ index + 1 }}</strong>
+            <ElButton
               v-if="form.translations.length > 1"
               link
               type="danger"
@@ -433,23 +443,26 @@ onMounted(() => {
             </ElButton>
           </div>
           <ElFormItem label="语言代码">
-            <ElInput
-              v-model="translation.languageCode"
-              class="!w-40"
-            />
-</ElFormItem><ElFormItem label="标题">
+            <ElInput v-model="translation.languageCode" class="!w-40"/>
+          </ElFormItem>
+          <ElFormItem label="标题">
             <ElInput v-model="translation.title" />
-</ElFormItem><ElFormItem label="Markdown 正文">
+          </ElFormItem>
+          <ElFormItem label="Markdown 正文">
             <ElInput
               v-model="translation.bodyMarkdown"
               type="textarea"
               :rows="10"
             />
-</ElFormItem><ElDivider>安全预览</ElDivider><SafeMarkdownPreview :source="translation.bodyMarkdown" />
+          </ElFormItem>
+          <ElDivider>安全预览</ElDivider>
+          <SafeMarkdownPreview :source="translation.bodyMarkdown"/>
         </div>
         <ElButton @click="addTranslation">添加翻译</ElButton>
-</ElForm><template #footer>
-        <ElButton @click="editorOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="save">
+      </ElForm>
+      <template #footer>
+        <ElButton @click="editorOpen = false">取消</ElButton>
+        <ElButton :loading="saving" type="primary" @click="save">
           保存草稿
         </ElButton>
       </template>

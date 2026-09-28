@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import type { PenaltyRow } from '#/api/penalties';
+import type {PenaltyRow} from '#/api/penalties';
+import {createPenalty, listPenalties, revokePenalty} from '#/api/penalties';
 
-import { computed, onMounted, reactive, ref } from 'vue';
+import {computed, onMounted, reactive, ref} from 'vue';
 
-import { useAccess } from '@vben/access';
-import { useTimezoneStore } from '@vben/stores';
+import {useAccess} from '@vben/access';
+import {useTimezoneStore} from '@vben/stores';
 
 import {
   ElButton,
@@ -21,17 +22,12 @@ import {
   ElTable,
   ElTableColumn,
 } from 'element-plus';
-
-import { createPenalty, listPenalties, revokePenalty } from '#/api/penalties';
 import AdminEnumTag from '#/components/admin-enum-tag.vue';
 import AdminPage from '#/components/admin-page.vue';
 import AdminTime from '#/components/admin-time.vue';
-import {
-  adminDateTimeRangeToUtc,
-  adminDateTimeToUtc,
-} from '#/utils/admin-datetime';
-import { promptDialog } from '#/utils/message-box';
-import { isValidReasonCode, validateReasonCode } from '#/utils/reason-code';
+import {adminDateTimeRangeToUtc, adminDateTimeToUtc,} from '#/utils/admin-datetime';
+import {promptDialog} from '#/utils/message-box';
+import {isValidReasonCode, validateReasonCode} from '#/utils/reason-code';
 
 const { hasAccessByCodes } = useAccess();
 const timezoneStore = useTimezoneStore();
@@ -232,7 +228,8 @@ onMounted(search);
       <ElButton v-if="canCreate" type="primary" @click="openCreate">
         创建处罚
       </ElButton>
-</template><ElCard shadow="never">
+    </template>
+    <ElCard shadow="never">
       <div class="admin-filter">
         <ElInput
           v-model="filter.userId"
@@ -248,8 +245,10 @@ onMounted(search);
           <ElOption label="生效中" value="active" /><ElOption
             label="已过期"
             value="expired"
-          /><ElOption label="已撤销" value="revoked" />
-</ElSelect><ElSelect
+      />
+        <ElOption label="已撤销" value="revoked"/>
+      </ElSelect>
+        <ElSelect
           v-model="filter.penaltyType"
           clearable
           placeholder="处罚类型"
@@ -261,7 +260,8 @@ onMounted(search);
             :label="label"
             :value="value"
           />
-</ElSelect><ElInput
+        </ElSelect>
+        <ElInput
           v-model="filter.scope"
           placeholder="生效范围"
           clearable
@@ -307,7 +307,9 @@ onMounted(search);
               :label="typeText(row.penaltyType)"
             />
           </template>
-</ElTableColumn><ElTableColumn prop="scope" label="范围" width="110" /><ElTableColumn
+      </ElTableColumn>
+        <ElTableColumn label="范围" prop="scope" width="110"/>
+        <ElTableColumn
           prop="reasonCode"
           label="原因代码"
           min-width="145"
@@ -315,18 +317,18 @@ onMounted(search);
           <template #default="{ row }">
             {{ row.referenceType }} #{{ row.referenceId }}
           </template>
-</ElTableColumn><ElTableColumn prop="status" label="状态" width="120">
+      </ElTableColumn>
+        <ElTableColumn label="状态" prop="status" width="120">
           <template #default="{ row }">
             <AdminEnumTag :value="row.status" />
           </template>
-</ElTableColumn><ElTableColumn prop="endsAt" label="结束时间" min-width="170">
+        </ElTableColumn>
+        <ElTableColumn label="结束时间" min-width="170" prop="endsAt">
           <template #default="{ row }">
             <AdminTime :value="row.endsAt" />
           </template>
-</ElTableColumn><!-- @vue-generic {PenaltyRow} --><ElTableColumn
-          label="操作"
-          width="95"
-        >
+        </ElTableColumn><!-- @vue-generic {PenaltyRow} -->
+        <ElTableColumn label="操作" width="95">
           <template #default="{ row }">
             <ElButton
               v-if="canRevoke && row.status === 'active'"
@@ -342,14 +344,16 @@ onMounted(search);
       <div class="admin-pagination">
         <ElButton :disabled="cursorStack.length === 0" @click="previous">
           上一页
-</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
+        </ElButton>
+        <ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
       </div>
     </ElCard>
     <ElDialog v-model="createOpen" title="创建处罚" width="540px">
       <ElForm label-width="110px">
         <ElFormItem label="用户 ID">
           <ElInputNumber v-model="form.userId" :min="1" />
-</ElFormItem><ElFormItem label="处罚类型">
+        </ElFormItem>
+        <ElFormItem label="处罚类型">
           <ElSelect
             v-model="form.penaltyType"
             placeholder="请选择"
@@ -362,27 +366,28 @@ onMounted(search);
               :value="value"
             />
           </ElSelect>
-</ElFormItem><ElFormItem label="生效范围">
+        </ElFormItem>
+        <ElFormItem label="生效范围">
           <ElInput
             v-model="form.scope"
             maxlength="64"
             placeholder="稳定范围代码"
           />
-</ElFormItem><ElFormItem label="原因代码">
-          <ElInput
-            v-model="form.reasonCode"
-            maxlength="64"
-            show-word-limit
-          />
-</ElFormItem><ElFormItem label="关联类型">
+        </ElFormItem>
+        <ElFormItem label="原因代码">
+          <ElInput v-model="form.reasonCode" maxlength="64" show-word-limit/>
+        </ElFormItem>
+        <ElFormItem label="关联类型">
           <ElInput
             v-model="form.referenceType"
             maxlength="32"
             placeholder="如 report"
           />
-</ElFormItem><ElFormItem label="关联 ID">
+        </ElFormItem>
+        <ElFormItem label="关联 ID">
           <ElInputNumber v-model="form.referenceId" :min="1" />
-</ElFormItem><ElFormItem label="结束时间">
+        </ElFormItem>
+        <ElFormItem label="结束时间">
           <ElDatePicker
             v-model="form.endsAt"
             type="datetime"
@@ -399,8 +404,10 @@ onMounted(search);
             timezoneStore.timezone
           }}</span>
         </ElFormItem>
-</ElForm><template #footer>
-        <ElButton @click="createOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="save">
+      </ElForm>
+      <template #footer>
+        <ElButton @click="createOpen = false">取消</ElButton>
+        <ElButton :loading="saving" type="primary" @click="save">
           创建
         </ElButton>
       </template>

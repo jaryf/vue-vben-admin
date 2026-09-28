@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { ReviewDetail, ReviewRow } from '#/api/moderation';
+import type {ReviewDetail, ReviewRow} from '#/api/moderation';
+import {decideReview, getReview, listReviews} from '#/api/moderation';
 
-import { computed, onMounted, reactive, ref } from 'vue';
+import {computed, onMounted, reactive, ref} from 'vue';
 
-import { useTimezoneStore } from '@vben/stores';
+import {useTimezoneStore} from '@vben/stores';
 
 import {
   ElAlert,
@@ -25,14 +26,12 @@ import {
   ElTable,
   ElTableColumn,
 } from 'element-plus';
-
-import { decideReview, getReview, listReviews } from '#/api/moderation';
 import AdminEnumTag from '#/components/admin-enum-tag.vue';
 import AdminPage from '#/components/admin-page.vue';
 import AdminTime from '#/components/admin-time.vue';
-import { adminDateTimeRangeToUtc } from '#/utils/admin-datetime';
-import { promptDialog } from '#/utils/message-box';
-import { validateReasonCode } from '#/utils/reason-code';
+import {adminDateTimeRangeToUtc} from '#/utils/admin-datetime';
+import {promptDialog} from '#/utils/message-box';
+import {validateReasonCode} from '#/utils/reason-code';
 
 const timezoneStore = useTimezoneStore();
 
@@ -446,7 +445,8 @@ onMounted(() => {
       <div class="admin-pagination">
         <ElButton :disabled="cursorStack.length === 0" @click="previous">
           上一页
-</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
+        </ElButton>
+        <ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
       </div>
     </ElCard>
 
@@ -466,46 +466,47 @@ onMounted(() => {
                 detail.review.targetType
               "
             />
-            #{{
-              detail.review.targetEntityId || detail.review.targetMessageId
-            }}
-</ElDescriptionsItem><ElDescriptionsItem label="场景">
+            #{{ detail.review.targetEntityId || detail.review.targetMessageId }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="场景">
             <AdminEnumTag :value="detail.review.scene" />
-</ElDescriptionsItem><ElDescriptionsItem label="状态">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="状态">
             <AdminEnumTag
               :value="detail.review.status"
               :label="
                 statusLabels[detail.review.status] || detail.review.status
               "
             />
-</ElDescriptionsItem><ElDescriptionsItem label="最终决策">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="最终决策">
             <AdminEnumTag
               :value="detail.review.finalDecision"
               :label="decisionText(detail.review.finalDecision)"
             />
-</ElDescriptionsItem><ElDescriptionsItem label="风险等级">
-            <AdminEnumTag
-              :value="detail.review.riskLevel"
-            />
-</ElDescriptionsItem><ElDescriptionsItem label="风险分类">
-            {{
-              detail.review.categories?.join('、') || '无'
-            }}
-</ElDescriptionsItem><ElDescriptionsItem label="规则版本">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="风险等级">
+            <AdminEnumTag :value="detail.review.riskLevel"/>
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="风险分类">
+            {{ detail.review.categories?.join('、') || '无' }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="规则版本">
             {{ detail.review.ruleVersion }}
-</ElDescriptionsItem><ElDescriptionsItem label="模型版本">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="模型版本">
             {{ detail.review.modelName }}
-</ElDescriptionsItem><ElDescriptionsItem label="证据数">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="证据数">
             {{ detail.review.evidenceCount }}
-</ElDescriptionsItem><ElDescriptionsItem label="请求时间">
-            <AdminTime
-              :value="detail.review.requestedAt"
-            />
-</ElDescriptionsItem><ElDescriptionsItem label="完成时间">
-            <AdminTime
-              :value="detail.review.completedAt"
-            />
-</ElDescriptionsItem><ElDescriptionsItem label="等待时长">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="请求时间">
+            <AdminTime :value="detail.review.requestedAt"/>
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="完成时间">
+            <AdminTime :value="detail.review.completedAt"/>
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="等待时长">
             {{
               detail.review.status === 'manual_review'
                 ? waitingTime(detail.review.requestedAt)
@@ -523,7 +524,8 @@ onMounted(() => {
             <template #default="{ row }">
               <AdminEnumTag :value="row.sourceType" />
             </template>
-</ElTableColumn><ElTableColumn
+        </ElTableColumn>
+          <ElTableColumn
             prop="maskedText"
             label="脱敏片段"
             min-width="250"

@@ -1,9 +1,15 @@
 <script setup lang="ts">
-import type { LanguageRow } from '#/api/languages';
+import type {LanguageRow} from '#/api/languages';
+import {
+  createLanguage,
+  listLanguages,
+  updateLanguage,
+  updateLanguageFallback,
+} from '#/api/languages';
 
-import { computed, onMounted, reactive, ref } from 'vue';
+import {computed, onMounted, reactive, ref} from 'vue';
 
-import { useAccess } from '@vben/access';
+import {useAccess} from '@vben/access';
 
 import {
   ElAlert,
@@ -21,17 +27,10 @@ import {
   ElTable,
   ElTableColumn,
 } from 'element-plus';
-
-import {
-  createLanguage,
-  listLanguages,
-  updateLanguage,
-  updateLanguageFallback,
-} from '#/api/languages';
 import AdminEnumTag from '#/components/admin-enum-tag.vue';
 import AdminPage from '#/components/admin-page.vue';
 import AdminTime from '#/components/admin-time.vue';
-import { confirmDialog } from '#/utils/message-box';
+import {confirmDialog} from '#/utils/message-box';
 
 const { hasAccessByCodes } = useAccess();
 const canUpdate = computed(() => hasAccessByCodes(['language.update']));
@@ -190,7 +189,8 @@ onMounted(() => {
       <ElButton v-if="canCreate" type="primary" @click="openCreate">
         登记语言
       </ElButton>
-</template><ElCard shadow="never">
+    </template>
+    <ElCard shadow="never">
       <div class="admin-filter">
         <ElInput
           v-model="filter.code"
@@ -207,7 +207,8 @@ onMounted(() => {
             label="停用"
             value="false"
           />
-</ElSelect><ElButton type="primary" @click="load">查询</ElButton>
+      </ElSelect>
+        <ElButton type="primary" @click="load">查询</ElButton>
       </div>
       <ElTable v-loading="loading" :data="rows" row-key="code">
         <ElTableColumn prop="code" label="代码" width="90" /><ElTableColumn
@@ -229,10 +230,8 @@ onMounted(() => {
               :tone="row.enabled ? 'success' : 'info'"
             />
           </template>
-</ElTableColumn><!-- @vue-generic {LanguageRow} --><ElTableColumn
-          label="客户端"
-          width="105"
-        >
+      </ElTableColumn><!-- @vue-generic {LanguageRow} -->
+        <ElTableColumn label="客户端" width="105">
           <template #default="{ row }">
             <AdminEnumTag
               :value="row.clientAvailable"
@@ -240,10 +239,8 @@ onMounted(() => {
               :tone="row.clientAvailable ? 'success' : 'info'"
             />
           </template>
-</ElTableColumn><!-- @vue-generic {LanguageRow} --><ElTableColumn
-          label="内容"
-          width="105"
-        >
+        </ElTableColumn><!-- @vue-generic {LanguageRow} -->
+        <ElTableColumn label="内容" width="105">
           <template #default="{ row }">
             <AdminEnumTag
               :value="row.contentAvailable"
@@ -251,10 +248,8 @@ onMounted(() => {
               :tone="row.contentAvailable ? 'success' : 'info'"
             />
           </template>
-</ElTableColumn><!-- @vue-generic {LanguageRow} --><ElTableColumn
-          label="审核"
-          width="105"
-        >
+        </ElTableColumn><!-- @vue-generic {LanguageRow} -->
+        <ElTableColumn label="审核" width="105">
           <template #default="{ row }">
             <AdminEnumTag
               :value="row.moderationAvailable"
@@ -262,10 +257,8 @@ onMounted(() => {
               :tone="row.moderationAvailable ? 'success' : 'info'"
             />
           </template>
-</ElTableColumn><!-- @vue-generic {LanguageRow} --><ElTableColumn
-          label="AI 生成"
-          width="105"
-        >
+        </ElTableColumn><!-- @vue-generic {LanguageRow} -->
+        <ElTableColumn label="AI 生成" width="105">
           <template #default="{ row }">
             <AdminEnumTag
               :value="row.aiGenerationAvailable"
@@ -273,7 +266,8 @@ onMounted(() => {
               :tone="row.aiGenerationAvailable ? 'success' : 'info'"
             />
           </template>
-</ElTableColumn><ElTableColumn
+        </ElTableColumn>
+        <ElTableColumn
           prop="fallbackLanguageCode"
           label="回退语言"
           width="105"
@@ -285,21 +279,20 @@ onMounted(() => {
           <template #default="{ row }">
             <AdminTime :value="row.updatedAt" />
           </template>
-</ElTableColumn><!-- @vue-generic {LanguageRow} --><ElTableColumn
-          v-if="canUpdate"
-          label="操作"
-          width="150"
-        >
+      </ElTableColumn><!-- @vue-generic {LanguageRow} -->
+        <ElTableColumn v-if="canUpdate" label="操作" width="150">
           <template #default="{ row }">
             <ElButton link type="primary" @click="openEditor(row)">
               能力
-</ElButton><ElButton link type="primary" @click="openFallback(row)">
+            </ElButton>
+            <ElButton link type="primary" @click="openFallback(row)">
               回退
             </ElButton>
           </template>
         </ElTableColumn>
       </ElTable>
-</ElCard><ElDialog
+    </ElCard>
+    <ElDialog
       v-model="editorOpen"
       :title="`配置语言 ${editing?.displayName || ''}`"
       width="520px"
@@ -307,17 +300,23 @@ onMounted(() => {
       <ElForm label-width="125px">
         <ElFormItem label="启用语言">
           <ElSwitch v-model="form.enabled" />
-</ElFormItem><ElFormItem label="客户端可用">
+        </ElFormItem>
+        <ElFormItem label="客户端可用">
           <ElSwitch v-model="form.clientAvailable" />
-</ElFormItem><ElFormItem label="内容可用">
+        </ElFormItem>
+        <ElFormItem label="内容可用">
           <ElSwitch v-model="form.contentAvailable" />
-</ElFormItem><ElFormItem label="审核可用">
+        </ElFormItem>
+        <ElFormItem label="审核可用">
           <ElSwitch v-model="form.moderationAvailable" />
-</ElFormItem><ElFormItem label="AI 生成可用">
+        </ElFormItem>
+        <ElFormItem label="AI 生成可用">
           <ElSwitch v-model="form.aiGenerationAvailable" />
         </ElFormItem>
-</ElForm><template #footer>
-        <ElButton @click="editorOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="save">
+      </ElForm>
+      <template #footer>
+        <ElButton @click="editorOpen = false">取消</ElButton>
+        <ElButton :loading="saving" type="primary" @click="save">
           保存
         </ElButton>
       </template>
@@ -331,28 +330,23 @@ onMounted(() => {
         :closable="false"
       /><ElForm label-width="125px">
         <ElFormItem label="语言代码">
-          <ElInput
-            v-model="createForm.code"
-            placeholder="如 gu 或 en-US"
-          />
-</ElFormItem><ElFormItem label="本地名称">
-          <ElInput
-            v-model="createForm.nativeName"
-            maxlength="80"
-          />
-</ElFormItem><ElFormItem label="管理名称">
-          <ElInput
-            v-model="createForm.displayName"
-            maxlength="80"
-          />
-</ElFormItem><ElFormItem label="文字方向">
+          <ElInput v-model="createForm.code" placeholder="如 gu 或 en-US"/>
+        </ElFormItem>
+      <ElFormItem label="本地名称">
+        <ElInput v-model="createForm.nativeName" maxlength="80"/>
+      </ElFormItem>
+      <ElFormItem label="管理名称">
+        <ElInput v-model="createForm.displayName" maxlength="80"/>
+      </ElFormItem>
+      <ElFormItem label="文字方向">
           <ElSelect v-model="createForm.textDirection">
             <ElOption label="从左到右" value="ltr" /><ElOption
               label="从右到左"
               value="rtl"
             />
           </ElSelect>
-</ElFormItem><ElFormItem label="回退语言">
+      </ElFormItem>
+      <ElFormItem label="回退语言">
           <ElSelect v-model="createForm.fallbackLanguageCode" clearable>
             <ElOption
               v-for="row in fallbackOptions"
@@ -361,11 +355,14 @@ onMounted(() => {
               :value="row.code"
             />
           </ElSelect>
-</ElFormItem><ElFormItem label="唯一排序值">
+      </ElFormItem>
+      <ElFormItem label="唯一排序值">
           <ElInputNumber v-model="createForm.sort" :min="1" :max="1000000" />
         </ElFormItem>
-</ElForm><template #footer>
-        <ElButton @click="createOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="saveCreate">
+    </ElForm>
+      <template #footer>
+        <ElButton @click="createOpen = false">取消</ElButton>
+        <ElButton :loading="saving" type="primary" @click="saveCreate">
           登记
         </ElButton>
       </template>
@@ -399,8 +396,10 @@ onMounted(() => {
             />
           </ElSelect>
         </ElFormItem>
-</ElForm><template #footer>
-        <ElButton @click="fallbackOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="saveFallback">
+    </ElForm>
+      <template #footer>
+        <ElButton @click="fallbackOpen = false">取消</ElButton>
+        <ElButton :loading="saving" type="primary" @click="saveFallback">
           保存回退
         </ElButton>
       </template>

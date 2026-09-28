@@ -1,11 +1,23 @@
 <script setup lang="ts">
-import type {
-  AIGenerationBatch,
-  AIGenerationItem,
-  AIReplyTask,
+import type {AIGenerationBatch, AIGenerationItem, AIReplyTask,} from '#/api/ai';
+import {
+  approveGenerationItem,
+  cancelAIReplyTask,
+  cancelGenerationBatch,
+  createGenerationBatch,
+  getAIReplyTask,
+  getGenerationBatch,
+  listAIReplyTasks,
+  listGenerationBatches,
+  listGenerationItems,
+  publishGenerationItems,
+  rejectGenerationItem,
+  retryAIReplyTask,
+  startGenerationBatch,
+  updateGenerationItem,
 } from '#/api/ai';
 
-import { onMounted, reactive, ref } from 'vue';
+import {onMounted, reactive, ref} from 'vue';
 
 import {
   ElAlert,
@@ -27,27 +39,10 @@ import {
   ElTabPane,
   ElTabs,
 } from 'element-plus';
-
-import {
-  approveGenerationItem,
-  cancelAIReplyTask,
-  cancelGenerationBatch,
-  createGenerationBatch,
-  getAIReplyTask,
-  getGenerationBatch,
-  listAIReplyTasks,
-  listGenerationBatches,
-  listGenerationItems,
-  publishGenerationItems,
-  rejectGenerationItem,
-  retryAIReplyTask,
-  startGenerationBatch,
-  updateGenerationItem,
-} from '#/api/ai';
 import AdminEnumTag from '#/components/admin-enum-tag.vue';
 import AdminPage from '#/components/admin-page.vue';
 import AdminTime from '#/components/admin-time.vue';
-import { confirmDialog, promptDialog } from '#/utils/message-box';
+import {confirmDialog, promptDialog} from '#/utils/message-box';
 
 type Tab = 'batches' | 'items' | 'replies';
 const active = ref<Tab>('batches');
@@ -410,7 +405,8 @@ onMounted(search);
     <template #actions>
       <ElButton v-if="active === 'batches'" type="primary" @click="openCreate">
         创建生成批次
-</ElButton><ElButton
+      </ElButton>
+      <ElButton
         v-else-if="active === 'items'"
         type="primary"
         :disabled="
@@ -530,32 +526,29 @@ onMounted(search);
           <template #default="{ row }">
             <AdminEnumTag :value="row.status" :label="statusText(row.status)" />
           </template>
-</ElTableColumn><!-- @vue-generic {AIGenerationBatch} --><ElTableColumn
-          prop="createdAt"
-          label="创建时间"
-          min-width="175"
-        >
+      </ElTableColumn><!-- @vue-generic {AIGenerationBatch} -->
+        <ElTableColumn label="创建时间" min-width="175" prop="createdAt">
           <template #default="{ row }">
             <AdminTime :value="row.createdAt" />
           </template>
-</ElTableColumn><!-- @vue-generic {AIGenerationBatch} --><ElTableColumn
-          label="操作"
-          width="220"
-          fixed="right"
-        >
+        </ElTableColumn><!-- @vue-generic {AIGenerationBatch} -->
+        <ElTableColumn fixed="right" label="操作" width="220">
           <template #default="{ row }">
             <ElButton link type="primary" @click="openDetail(row)">
               详情
-</ElButton><ElButton link type="primary" @click="viewBatchItems(row.batchId)">
+            </ElButton>
+            <ElButton link type="primary" @click="viewBatchItems(row.batchId)">
               内容
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="row.status === 'draft'"
               link
               type="success"
               @click="batchAction(row, 'start')"
             >
               启动
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="['draft', 'queued', 'running'].includes(row.status)"
               link
               type="warning"
@@ -597,7 +590,8 @@ onMounted(search);
           <template #default="{ row }">
             <AdminEnumTag :value="row.status" :label="statusText(row.status)" />
           </template>
-</ElTableColumn><ElTableColumn
+      </ElTableColumn>
+        <ElTableColumn
           prop="contentRevision"
           label="修订"
           width="70"
@@ -614,14 +608,16 @@ onMounted(search);
               @click="openEdit(row)"
             >
               编辑
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="row.status === 'awaiting_approval'"
               link
               type="success"
               @click="reviewItem(row, true)"
             >
               批准
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="row.status === 'awaiting_approval'"
               link
               type="danger"
@@ -653,7 +649,8 @@ onMounted(search);
           <template #default="{ row }">
             <AdminEnumTag :value="row.status" :label="statusText(row.status)" />
           </template>
-</ElTableColumn><ElTableColumn
+      </ElTableColumn>
+        <ElTableColumn
           prop="attempts"
           label="尝试次数"
           width="95"
@@ -669,22 +666,21 @@ onMounted(search);
           <template #default="{ row }">
             <AdminTime :value="row.scheduledAt" />
           </template>
-</ElTableColumn><!-- @vue-generic {AIReplyTask} --><ElTableColumn
-          label="操作"
-          width="170"
-          fixed="right"
-        >
+      </ElTableColumn><!-- @vue-generic {AIReplyTask} -->
+        <ElTableColumn fixed="right" label="操作" width="170">
           <template #default="{ row }">
             <ElButton link type="primary" @click="openDetail(row)">
               详情
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="row.status === 'failed'"
               link
               type="success"
               @click="replyAction(row, 'retry')"
             >
               重试
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="!['sent', 'cancelled'].includes(row.status)"
               link
               type="warning"
@@ -698,29 +694,31 @@ onMounted(search);
       <div class="admin-pagination">
         <ElButton :disabled="cursorStack.length === 0" @click="previous">
           上一页
-</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
+        </ElButton>
+        <ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
       </div>
     </ElCard>
     <ElDialog v-model="createOpen" title="创建生成批次" width="520px">
       <ElForm label-width="125px">
         <ElFormItem label="分类 ID">
           <ElInputNumber v-model="draft.categoryId" :min="1" />
-</ElFormItem><ElFormItem label="语言代码">
+        </ElFormItem>
+        <ElFormItem label="语言代码">
           <ElInput v-model="draft.languageCode" />
-</ElFormItem><ElFormItem label="目标数量">
-          <ElInputNumber
-            v-model="draft.targetCount"
-            :min="1"
-            :max="1000"
-          />
-</ElFormItem><ElFormItem label="模型配置版本">
+        </ElFormItem>
+        <ElFormItem label="目标数量">
+          <ElInputNumber v-model="draft.targetCount" :max="1000" :min="1"/>
+        </ElFormItem>
+        <ElFormItem label="模型配置版本">
           <ElInput
             v-model="draft.modelConfigVersion"
             placeholder="已发布的模型配置版本"
           />
         </ElFormItem>
-</ElForm><template #footer>
-        <ElButton @click="createOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="create">
+      </ElForm>
+      <template #footer>
+        <ElButton @click="createOpen = false">取消</ElButton>
+        <ElButton :loading="saving" type="primary" @click="create">
           创建草稿
         </ElButton>
       </template>
@@ -742,7 +740,8 @@ onMounted(search);
         maxlength="500"
         show-word-limit
       /><template #footer>
-        <ElButton @click="editOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="saveItem">
+      <ElButton @click="editOpen = false">取消</ElButton>
+      <ElButton :loading="saving" type="primary" @click="saveItem">
           保存
         </ElButton>
       </template>

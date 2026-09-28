@@ -1,10 +1,17 @@
 <script setup lang="ts">
-import type { ContactDetail, ContactRow } from '#/api/contact-requests';
+import type {ContactDetail, ContactRow} from '#/api/contact-requests';
+import {
+  assignContactRequest,
+  getContactRequest,
+  listContactRequests,
+  replyContactRequest,
+  resolveContactRequest,
+} from '#/api/contact-requests';
 
-import { computed, onMounted, reactive, ref } from 'vue';
+import {computed, onMounted, reactive, ref} from 'vue';
 
-import { useAccess } from '@vben/access';
-import { useTimezoneStore } from '@vben/stores';
+import {useAccess} from '@vben/access';
+import {useTimezoneStore} from '@vben/stores';
 
 import {
   ElAlert,
@@ -25,20 +32,12 @@ import {
   ElTable,
   ElTableColumn,
 } from 'element-plus';
-
-import {
-  assignContactRequest,
-  getContactRequest,
-  listContactRequests,
-  replyContactRequest,
-  resolveContactRequest,
-} from '#/api/contact-requests';
 import AdminEnumTag from '#/components/admin-enum-tag.vue';
 import AdminPage from '#/components/admin-page.vue';
 import AdminTime from '#/components/admin-time.vue';
-import { adminDateTimeRangeToUtc } from '#/utils/admin-datetime';
-import { promptDialog } from '#/utils/message-box';
-import { validateReasonCode } from '#/utils/reason-code';
+import {adminDateTimeRangeToUtc} from '#/utils/admin-datetime';
+import {promptDialog} from '#/utils/message-box';
+import {validateReasonCode} from '#/utils/reason-code';
 
 const { hasAccessByCodes } = useAccess();
 const timezoneStore = useTimezoneStore();
@@ -250,7 +249,8 @@ onMounted(() => {
             :label="label"
             :value="value"
           />
-</ElSelect><ElInput
+      </ElSelect>
+        <ElInput
           v-model="filter.senderEmail"
           placeholder="发件邮箱"
           clearable
@@ -309,7 +309,8 @@ onMounted(() => {
           <template #default="{ row }">
             <AdminEnumTag :value="row.status" :label="statusText(row.status)" />
           </template>
-</ElTableColumn><ElTableColumn
+      </ElTableColumn>
+        <ElTableColumn
           prop="notificationErrorCode"
           label="通知错误"
           min-width="135"
@@ -321,10 +322,8 @@ onMounted(() => {
           <template #default="{ row }">
             <AdminTime :value="row.createdAt" />
           </template>
-</ElTableColumn><!-- @vue-generic {ContactRow} --><ElTableColumn
-          label="操作"
-          width="90"
-        >
+      </ElTableColumn><!-- @vue-generic {ContactRow} -->
+        <ElTableColumn label="操作" width="90">
           <template #default="{ row }">
             <ElButton link type="primary" @click="openDetail(row)">
               详情
@@ -335,9 +334,11 @@ onMounted(() => {
       <div class="admin-pagination">
         <ElButton :disabled="cursorStack.length === 0" @click="previous">
           上一页
-</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
+        </ElButton>
+        <ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
       </div>
-</ElCard><ElDrawer
+    </ElCard>
+    <ElDrawer
       v-model="detailOpen"
       :title="`联系请求 #${detail?.contactRequestId || ''}`"
       size="65%"
@@ -347,21 +348,27 @@ onMounted(() => {
         <ElDescriptions :column="2" border>
           <ElDescriptionsItem label="姓名">
             {{ detail.senderName }}
-</ElDescriptionsItem><ElDescriptionsItem label="邮箱">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="邮箱">
             {{ detail.senderEmail }}
-</ElDescriptionsItem><ElDescriptionsItem label="主题">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="主题">
             {{ detail.subject }}
-</ElDescriptionsItem><ElDescriptionsItem label="状态">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="状态">
             <AdminEnumTag
               :value="detail.status"
               :label="statusText(detail.status)"
             />
-</ElDescriptionsItem><ElDescriptionsItem label="分派管理员">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="分派管理员">
             {{ detail.assignedAdminId ?? '未分派' }}
-</ElDescriptionsItem><ElDescriptionsItem label="公共请求 ID">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="公共请求 ID">
             {{ detail.publicRequestId }}
           </ElDescriptionsItem>
-</ElDescriptions><ElDivider>来信全文</ElDivider>
+        </ElDescriptions>
+        <ElDivider>来信全文</ElDivider>
         <pre class="whitespace-pre-wrap break-all">{{ detail.message }}</pre>
         <div class="mt-4 flex gap-2">
           <ElButton
@@ -369,13 +376,15 @@ onMounted(() => {
             @click="assign"
           >
             分派
-</ElButton><ElButton
+          </ElButton>
+          <ElButton
             v-if="canReply && detail.status !== 'resolved'"
             type="primary"
             @click="openReply"
           >
             回复
-</ElButton><ElButton
+          </ElButton>
+          <ElButton
             v-if="canResolve && detail.status !== 'resolved'"
             type="success"
             @click="resolve"
@@ -383,7 +392,8 @@ onMounted(() => {
             标记已解决
           </ElButton>
         </div>
-        <ElDivider>回复记录</ElDivider><ElTable :data="detail.replies">
+        <ElDivider>回复记录</ElDivider>
+        <ElTable :data="detail.replies">
           <ElTableColumn
             prop="replyId"
             label="回复 ID"
@@ -401,7 +411,8 @@ onMounted(() => {
             <template #default="{ row }">
               <AdminEnumTag :value="row.deliveryStatus" />
             </template>
-</ElTableColumn><ElTableColumn
+        </ElTableColumn>
+          <ElTableColumn
             prop="deliveryErrorCode"
             label="错误码"
             min-width="145"
@@ -417,11 +428,14 @@ onMounted(() => {
       <ElForm label-width="80px">
         <ElFormItem label="主题">
           <ElInput v-model="replyForm.subject" />
-</ElFormItem><ElFormItem label="正文">
+        </ElFormItem>
+        <ElFormItem label="正文">
           <ElInput v-model="replyForm.message" type="textarea" :rows="8" />
         </ElFormItem>
-</ElForm><template #footer>
-        <ElButton @click="replyOpen = false">取消</ElButton><ElButton type="primary" :loading="sending" @click="reply">
+      </ElForm>
+      <template #footer>
+        <ElButton @click="replyOpen = false">取消</ElButton>
+        <ElButton :loading="sending" type="primary" @click="reply">
           发送回复
         </ElButton>
       </template>

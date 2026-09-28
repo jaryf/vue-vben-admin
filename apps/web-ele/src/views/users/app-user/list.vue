@@ -1,11 +1,29 @@
 <script setup lang="ts">
-import type { AppUserDetail, AppUserRow } from '#/api/app-users';
-import type { OrderDetail } from '#/api/commerce';
+import type {AppUserDetail, AppUserRow} from '#/api/app-users';
+import {
+  adjustAppUserEntitlement,
+  adjustAppUserQuota,
+  getAppUser,
+  getDeletionRequest,
+  listAppUserBindings,
+  listAppUserDevices,
+  listAppUserIdentityConflicts,
+  listAppUsers,
+  listAppUserSessions,
+  listDeletionRequests,
+  reviewDeletionRequest,
+  revokeAppUserSession,
+  revokeAppUserSessions,
+  updateAppUserBirthDate,
+  updateAppUserStatus,
+} from '#/api/app-users';
+import type {OrderDetail} from '#/api/commerce';
+import {getOrder, listAppUserOrders, listCoinLedger, listEntitlementLedger,} from '#/api/commerce';
 
-import { computed, onMounted, reactive, ref } from 'vue';
+import {computed, onMounted, reactive, ref} from 'vue';
 
-import { useAccess } from '@vben/access';
-import { useTimezoneStore } from '@vben/stores';
+import {useAccess} from '@vben/access';
+import {useTimezoneStore} from '@vben/stores';
 
 import {
   ElAlert,
@@ -31,40 +49,16 @@ import {
   ElTabPane,
   ElTabs,
 } from 'element-plus';
-
-import {
-  adjustAppUserEntitlement,
-  adjustAppUserQuota,
-  getAppUser,
-  getDeletionRequest,
-  listAppUserBindings,
-  listAppUserDevices,
-  listAppUserIdentityConflicts,
-  listAppUsers,
-  listAppUserSessions,
-  listDeletionRequests,
-  reviewDeletionRequest,
-  revokeAppUserSession,
-  revokeAppUserSessions,
-  updateAppUserBirthDate,
-  updateAppUserStatus,
-} from '#/api/app-users';
-import { listBottles } from '#/api/bottles';
-import {
-  getOrder,
-  listAppUserOrders,
-  listCoinLedger,
-  listEntitlementLedger,
-} from '#/api/commerce';
-import { listConversations } from '#/api/conversations';
-import { listRiskEvents } from '#/api/risk-events';
-import { listReports } from '#/api/safety-cases';
+import {listBottles} from '#/api/bottles';
+import {listConversations} from '#/api/conversations';
+import {listRiskEvents} from '#/api/risk-events';
+import {listReports} from '#/api/safety-cases';
 import AdminEnumTag from '#/components/admin-enum-tag.vue';
 import AdminPage from '#/components/admin-page.vue';
 import AdminTime from '#/components/admin-time.vue';
-import { adminDateTimeRangeToUtc } from '#/utils/admin-datetime';
-import { promptDialog } from '#/utils/message-box';
-import { isValidReasonCode, validateReasonCode } from '#/utils/reason-code';
+import {adminDateTimeRangeToUtc} from '#/utils/admin-datetime';
+import {promptDialog} from '#/utils/message-box';
+import {isValidReasonCode, validateReasonCode} from '#/utils/reason-code';
 
 const { hasAccessByCodes } = useAccess();
 const timezoneStore = useTimezoneStore();
@@ -633,7 +627,8 @@ onMounted(() => {
         <ElTableColumn prop="interfaceLanguage" label="语言" width="90" />
         <ElTableColumn label="已绑定方式" min-width="180">
           <template #default="{ row }">
-            <span v-if="!row.emailBound && !row.googleBound && !row.appleBound">—</span><template v-else>
+            <span v-if="!row.emailBound && !row.googleBound && !row.appleBound">—</span>
+            <template v-else>
               <AdminEnumTag
                 v-if="row.emailBound"
                 value="email"
@@ -682,7 +677,8 @@ onMounted(() => {
       <div class="admin-pagination">
         <ElButton :disabled="cursorStack.length === 0" @click="previous">
           上一页
-</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
+        </ElButton>
+        <ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
       </div>
     </ElCard>
 
@@ -792,14 +788,14 @@ onMounted(() => {
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.entitlementType" />
                 </template>
-</ElTableColumn><ElTableColumn prop="balance" label="余额" /><ElTableColumn
-                prop="status"
-                label="状态"
-              >
+              </ElTableColumn>
+              <ElTableColumn label="余额" prop="balance"/>
+              <ElTableColumn label="状态" prop="status">
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.status" />
                 </template>
-</ElTableColumn><ElTableColumn prop="expiresAt" label="到期时间">
+              </ElTableColumn>
+              <ElTableColumn label="到期时间" prop="expiresAt">
                 <template #default="{ row }">
                   <AdminTime :value="row.expiresAt" />
                 </template>
@@ -815,18 +811,19 @@ onMounted(() => {
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.platform" />
                 </template>
-</ElTableColumn><ElTableColumn prop="deviceModel" label="设备" /><ElTableColumn
-                prop="lastUsedAt"
-                label="最近使用"
-              >
+            </ElTableColumn>
+              <ElTableColumn label="设备" prop="deviceModel"/>
+              <ElTableColumn label="最近使用" prop="lastUsedAt">
                 <template #default="{ row }">
                   <AdminTime :value="row.lastUsedAt" />
                 </template>
-</ElTableColumn><ElTableColumn prop="status" label="状态">
+              </ElTableColumn>
+              <ElTableColumn label="状态" prop="status">
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.status" />
                 </template>
-</ElTableColumn><ElTableColumn v-if="canRevoke" label="操作">
+              </ElTableColumn>
+              <ElTableColumn v-if="canRevoke" label="操作">
                 <template #default="{ row }">
                   <ElButton
                     v-if="row.status === 'active'"
@@ -848,14 +845,14 @@ onMounted(() => {
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.platform" />
                 </template>
-</ElTableColumn><ElTableColumn prop="deviceModel" label="型号" /><ElTableColumn
-                prop="integrityStatus"
-                label="完整性"
-              >
+            </ElTableColumn>
+              <ElTableColumn label="型号" prop="deviceModel"/>
+              <ElTableColumn label="完整性" prop="integrityStatus">
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.integrityStatus" />
                 </template>
-</ElTableColumn><ElTableColumn prop="lastActiveAt" label="最近活跃">
+              </ElTableColumn>
+              <ElTableColumn label="最近活跃" prop="lastActiveAt">
                 <template #default="{ row }">
                   <AdminTime :value="row.lastActiveAt" />
                 </template>
@@ -868,19 +865,24 @@ onMounted(() => {
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.provider" />
                 </template>
-</ElTableColumn><ElTableColumn
-                prop="displayValue"
-                label="展示值"
-              /><ElTableColumn prop="status" label="状态">
+              </ElTableColumn>
+              <ElTableColumn label="展示值" prop="displayValue"/>
+              <ElTableColumn
+                label="状态"
+                prop="status"
+              >
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.status" />
                 </template>
-</ElTableColumn><ElTableColumn prop="boundAt" label="绑定时间">
+              </ElTableColumn>
+              <ElTableColumn label="绑定时间" prop="boundAt">
                 <template #default="{ row }">
                   <AdminTime :value="row.boundAt" />
                 </template>
               </ElTableColumn>
-</ElTable><ElDivider>绑定冲突</ElDivider><ElTable :data="conflicts">
+            </ElTable>
+            <ElDivider>绑定冲突</ElDivider>
+            <ElTable :data="conflicts">
               <ElTableColumn prop="conflictId" label="记录 ID" /><ElTableColumn
                 prop="provider"
                 label="方式"
@@ -888,7 +890,8 @@ onMounted(() => {
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.provider" />
                 </template>
-</ElTableColumn><ElTableColumn prop="createdAt" label="时间">
+            </ElTableColumn>
+              <ElTableColumn label="时间" prop="createdAt">
                 <template #default="{ row }">
                   <AdminTime :value="row.createdAt" />
                 </template>
@@ -924,7 +927,8 @@ onMounted(() => {
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.status" />
                 </template>
-</ElTableColumn><ElTableColumn
+            </ElTableColumn>
+              <ElTableColumn
                 prop="amountMinor"
                 label="最小货币单位金额"
                 width="155"
@@ -940,7 +944,8 @@ onMounted(() => {
                 <template #default="{ row }">
                   <AdminTime :value="row.createdAt" />
                 </template>
-</ElTableColumn><ElTableColumn label="操作" width="80">
+            </ElTableColumn>
+              <ElTableColumn label="操作" width="80">
                 <template #default="{ row }">
                   <ElButton
                     link
@@ -970,11 +975,13 @@ onMounted(() => {
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.entitlementType" />
                 </template>
-</ElTableColumn><ElTableColumn prop="operation" label="操作" width="105">
+            </ElTableColumn>
+              <ElTableColumn label="操作" prop="operation" width="105">
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.operation" />
                 </template>
-</ElTableColumn><ElTableColumn
+              </ElTableColumn>
+              <ElTableColumn
                 prop="changeAmount"
                 label="变动"
                 width="95"
@@ -986,7 +993,8 @@ onMounted(() => {
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.sourceType" />
                 </template>
-</ElTableColumn><ElTableColumn prop="createdAt" label="创建时间" min-width="165">
+            </ElTableColumn>
+              <ElTableColumn label="创建时间" min-width="165" prop="createdAt">
                 <template #default="{ row }">
                   <AdminTime :value="row.createdAt" />
                 </template>
@@ -1006,7 +1014,8 @@ onMounted(() => {
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.operation" />
                 </template>
-</ElTableColumn><ElTableColumn
+            </ElTableColumn>
+              <ElTableColumn
                 prop="amount"
                 label="变动"
                 width="95"
@@ -1018,7 +1027,8 @@ onMounted(() => {
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.sourceType" />
                 </template>
-</ElTableColumn><ElTableColumn
+            </ElTableColumn>
+              <ElTableColumn
                 prop="orderId"
                 label="关联订单"
                 width="110"
@@ -1082,15 +1092,18 @@ onMounted(() => {
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.contentType" />
                 </template>
-</ElTableColumn><ElTableColumn prop="status" label="状态" width="120">
+            </ElTableColumn>
+              <ElTableColumn label="状态" prop="status" width="120">
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.status" />
                 </template>
-</ElTableColumn><ElTableColumn prop="reviewStatus" label="审核状态" width="120">
+              </ElTableColumn>
+              <ElTableColumn label="审核状态" prop="reviewStatus" width="120">
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.reviewStatus" />
                 </template>
-</ElTableColumn><ElTableColumn
+              </ElTableColumn>
+              <ElTableColumn
                 prop="reportCount"
                 label="举报数"
                 width="90"
@@ -1118,11 +1131,13 @@ onMounted(() => {
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.type" />
                 </template>
-</ElTableColumn><ElTableColumn prop="status" label="状态" width="120">
+            </ElTableColumn>
+              <ElTableColumn label="状态" prop="status" width="120">
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.status" />
                 </template>
-</ElTableColumn><ElTableColumn
+              </ElTableColumn>
+              <ElTableColumn
                 prop="memberCount"
                 label="成员数"
                 width="90"
@@ -1154,7 +1169,8 @@ onMounted(() => {
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.targetType" />
                 </template>
-</ElTableColumn><ElTableColumn
+            </ElTableColumn>
+              <ElTableColumn
                 prop="targetId"
                 label="目标 ID"
                 min-width="125"
@@ -1166,11 +1182,13 @@ onMounted(() => {
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.priority" />
                 </template>
-</ElTableColumn><ElTableColumn prop="status" label="状态" width="120">
+            </ElTableColumn>
+              <ElTableColumn label="状态" prop="status" width="120">
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.status" />
                 </template>
-</ElTableColumn><ElTableColumn prop="createdAt" label="提交时间" min-width="175">
+              </ElTableColumn>
+              <ElTableColumn label="提交时间" min-width="175" prop="createdAt">
                 <template #default="{ row }">
                   <AdminTime :value="row.createdAt" />
                 </template>
@@ -1194,11 +1212,13 @@ onMounted(() => {
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.severity" />
                 </template>
-</ElTableColumn><ElTableColumn prop="sourceType" label="来源" width="115">
+            </ElTableColumn>
+              <ElTableColumn label="来源" prop="sourceType" width="115">
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.sourceType" />
                 </template>
-</ElTableColumn><ElTableColumn
+              </ElTableColumn>
+              <ElTableColumn
                 prop="reasonCode"
                 label="原因"
                 min-width="125"
@@ -1227,14 +1247,17 @@ onMounted(() => {
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.fromStatus" />
                 </template>
-</ElTableColumn><ElTableColumn prop="toStatus" label="新状态">
+              </ElTableColumn>
+              <ElTableColumn label="新状态" prop="toStatus">
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.toStatus" />
                 </template>
-</ElTableColumn><ElTableColumn
-                prop="reasonCode"
-                label="原因代码"
-              /><ElTableColumn prop="createdAt" label="时间">
+              </ElTableColumn>
+              <ElTableColumn label="原因代码" prop="reasonCode"/>
+              <ElTableColumn
+                label="时间"
+                prop="createdAt"
+              >
                 <template #default="{ row }">
                   <AdminTime :value="row.createdAt" />
                 </template>
@@ -1255,17 +1278,20 @@ onMounted(() => {
         <ElDescriptions :column="2" border>
           <ElDescriptionsItem label="订单号">
             {{ orderDetail.order.orderNo }}
-</ElDescriptionsItem><ElDescriptionsItem label="状态">
-            <AdminEnumTag
-              :value="orderDetail.order.status"
-            />
-</ElDescriptionsItem><ElDescriptionsItem label="商品">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="状态">
+            <AdminEnumTag :value="orderDetail.order.status"/>
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="商品">
             {{ orderDetail.order.internalCode }}
-</ElDescriptionsItem><ElDescriptionsItem label="金额">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="金额">
             {{ orderDetail.order.amountMinor }}
             {{ orderDetail.order.currency }}（最小货币单位）
           </ElDescriptionsItem>
-</ElDescriptions><ElDivider>支付交易</ElDivider><ElTable :data="orderDetail.transactions">
+        </ElDescriptions>
+        <ElDivider>支付交易</ElDivider>
+        <ElTable :data="orderDetail.transactions">
           <ElTableColumn prop="transactionId" label="交易 ID" /><ElTableColumn
             prop="transactionType"
             label="类型"
@@ -1273,16 +1299,20 @@ onMounted(() => {
             <template #default="{ row }">
               <AdminEnumTag :value="row.transactionType" />
             </template>
-</ElTableColumn><ElTableColumn prop="status" label="状态">
+        </ElTableColumn>
+          <ElTableColumn label="状态" prop="status">
             <template #default="{ row }">
               <AdminEnumTag :value="row.status" />
             </template>
-</ElTableColumn><ElTableColumn prop="verifiedAt" label="验证时间">
+          </ElTableColumn>
+          <ElTableColumn label="验证时间" prop="verifiedAt">
             <template #default="{ row }">
               <AdminTime :value="row.verifiedAt" />
             </template>
           </ElTableColumn>
-</ElTable><ElDivider>权益流水</ElDivider><ElTable :data="orderDetail.entitlementLedger">
+        </ElTable>
+        <ElDivider>权益流水</ElDivider>
+        <ElTable :data="orderDetail.entitlementLedger">
           <ElTableColumn prop="ledgerId" label="流水 ID" /><ElTableColumn
             prop="entitlementType"
             label="权益"
@@ -1290,15 +1320,16 @@ onMounted(() => {
             <template #default="{ row }">
               <AdminEnumTag :value="row.entitlementType" />
             </template>
-</ElTableColumn><ElTableColumn prop="changeAmount" label="变动" /><ElTableColumn
-            prop="createdAt"
-            label="时间"
-          >
+        </ElTableColumn>
+          <ElTableColumn label="变动" prop="changeAmount"/>
+          <ElTableColumn label="时间" prop="createdAt">
             <template #default="{ row }">
               <AdminTime :value="row.createdAt" />
             </template>
           </ElTableColumn>
-</ElTable><ElDivider>金币流水</ElDivider><ElTable :data="orderDetail.coinLedger">
+        </ElTable>
+        <ElDivider>金币流水</ElDivider>
+        <ElTable :data="orderDetail.coinLedger">
           <ElTableColumn prop="ledgerId" label="流水 ID" /><ElTableColumn
             prop="amount"
             label="变动"
@@ -1393,7 +1424,8 @@ onMounted(() => {
         </ElFormItem>
       </ElForm>
       <template #footer>
-        <ElButton @click="actionOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="submitAction">
+        <ElButton @click="actionOpen = false">取消</ElButton>
+        <ElButton :loading="saving" type="primary" @click="submitAction">
           确认
         </ElButton>
       </template>
@@ -1469,7 +1501,8 @@ onMounted(() => {
           @click="previousDeletion"
         >
           上一页
-</ElButton><ElButton :disabled="!deletionCursor" @click="nextDeletion">
+        </ElButton>
+        <ElButton :disabled="!deletionCursor" @click="nextDeletion">
           下一页
         </ElButton>
       </div>
@@ -1491,18 +1524,22 @@ onMounted(() => {
       <ElDescriptions v-if="reviewTarget" :column="1" border class="mb-4">
         <ElDescriptionsItem label="用户 ID">
           {{ reviewTarget.userId }}
-</ElDescriptionsItem><ElDescriptionsItem label="申请原因">
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="申请原因">
           {{ reviewTarget.reasonCode }}
-</ElDescriptionsItem><ElDescriptionsItem label="原因补充">
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="原因补充">
           {{ reviewTarget.reasonText || '—' }}
-</ElDescriptionsItem><ElDescriptionsItem label="计划注销">
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="计划注销">
           <AdminTime :value="reviewTarget.scheduledFor" />
         </ElDescriptionsItem>
       </ElDescriptions>
       <ElForm label-position="top" @submit.prevent="submitReview">
         <ElFormItem label="复核结论">
           <ElRadioGroup v-model="reviewForm.decision">
-            <ElRadio value="approve">通过</ElRadio><ElRadio value="reject">驳回</ElRadio>
+            <ElRadio value="approve">通过</ElRadio>
+            <ElRadio value="reject">驳回</ElRadio>
           </ElRadioGroup>
         </ElFormItem>
         <ElFormItem label="原因代码">
@@ -1523,7 +1560,8 @@ onMounted(() => {
         </ElFormItem>
       </ElForm>
       <template #footer>
-        <ElButton @click="reviewOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="submitReview">
+        <ElButton @click="reviewOpen = false">取消</ElButton>
+        <ElButton :loading="saving" type="primary" @click="submitReview">
           提交复核
         </ElButton>
       </template>

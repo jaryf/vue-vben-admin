@@ -1,9 +1,20 @@
 <script setup lang="ts">
-import type { TaxonomyRow, TaxonomyTranslationRequest } from '#/api/taxonomy';
+import type {TaxonomyRow, TaxonomyTranslationRequest} from '#/api/taxonomy';
+import {
+  createBottleCategory,
+  createInterest,
+  listBottleCategories,
+  listInterests,
+  listTaxonomyTranslations,
+  reviewTaxonomyTranslation,
+  submitTaxonomyTranslation,
+  updateBottleCategory,
+  updateInterest,
+} from '#/api/taxonomy';
 
-import { computed, onMounted, reactive, ref } from 'vue';
+import {computed, onMounted, reactive, ref} from 'vue';
 
-import { useAccess } from '@vben/access';
+import {useAccess} from '@vben/access';
 
 import {
   ElAlert,
@@ -23,22 +34,10 @@ import {
   ElTabPane,
   ElTabs,
 } from 'element-plus';
-
-import {
-  createBottleCategory,
-  createInterest,
-  listBottleCategories,
-  listInterests,
-  listTaxonomyTranslations,
-  reviewTaxonomyTranslation,
-  submitTaxonomyTranslation,
-  updateBottleCategory,
-  updateInterest,
-} from '#/api/taxonomy';
 import AdminEnumTag from '#/components/admin-enum-tag.vue';
 import AdminPage from '#/components/admin-page.vue';
 import AdminTime from '#/components/admin-time.vue';
-import { confirmDialog, promptDialog } from '#/utils/message-box';
+import {confirmDialog, promptDialog} from '#/utils/message-box';
 
 const { hasAccessByCodes } = useAccess();
 const canUpdate = computed(() => hasAccessByCodes(['taxonomy.update']));
@@ -257,7 +256,8 @@ onMounted(() => {
       <ElButton v-if="canCreate" type="primary" @click="openCreate">
         新增条目
       </ElButton>
-</template><ElCard shadow="never">
+    </template>
+    <ElCard shadow="never">
       <ElTabs v-model="active" @tab-change="switchTab">
         <ElTabPane label="漂流瓶分类" name="categories" /><ElTabPane
           label="兴趣标签"
@@ -280,7 +280,8 @@ onMounted(() => {
             label="停用"
             value="false"
           />
-</ElSelect><ElButton type="primary" @click="load">查询</ElButton>
+      </ElSelect>
+        <ElButton type="primary" @click="load">查询</ElButton>
       </div>
       <ElTable v-loading="loading" :data="rows" row-key="id">
         <ElTableColumn prop="id" label="ID" width="90" /><ElTableColumn
@@ -294,10 +295,8 @@ onMounted(() => {
           <template #default="{ row }">
             {{ translationText(row) }}
           </template>
-</ElTableColumn><!-- @vue-generic {TaxonomyRow} --><ElTableColumn
-          label="状态"
-          width="120"
-        >
+      </ElTableColumn><!-- @vue-generic {TaxonomyRow} -->
+        <ElTableColumn label="状态" width="120">
           <template #default="{ row }">
             <AdminEnumTag
               :value="row.enabled"
@@ -305,7 +304,8 @@ onMounted(() => {
               :tone="row.enabled ? 'success' : 'info'"
             />
           </template>
-</ElTableColumn><ElTableColumn
+        </ElTableColumn>
+        <ElTableColumn
           prop="sortOrder"
           label="排序"
           width="90"
@@ -317,7 +317,8 @@ onMounted(() => {
           <template #default="{ row }">
             <AdminTime :value="row.updatedAt" />
           </template>
-</ElTableColumn><!-- @vue-generic {TaxonomyRow} --><ElTableColumn
+      </ElTableColumn><!-- @vue-generic {TaxonomyRow} -->
+        <ElTableColumn
           v-if="canUpdate || canWriteTranslation"
           label="操作"
           width="150"
@@ -330,7 +331,8 @@ onMounted(() => {
               @click="openEditor(row)"
             >
               配置
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="canWriteTranslation"
               link
               type="primary"
@@ -354,8 +356,10 @@ onMounted(() => {
           <ElOption label="待复核" value="pending" /><ElOption
             label="已发布"
             value="approved"
-          /><ElOption label="已驳回" value="rejected" />
-</ElSelect><ElButton type="primary" @click="searchTranslations">查询</ElButton>
+        />
+          <ElOption label="已驳回" value="rejected"/>
+        </ElSelect>
+        <ElButton type="primary" @click="searchTranslations">查询</ElButton>
       </div>
       <ElTable :data="translationRows" row-key="requestId">
         <ElTableColumn
@@ -375,7 +379,8 @@ onMounted(() => {
               tone="primary"
             />
           </template>
-</ElTableColumn><ElTableColumn
+      </ElTableColumn>
+        <ElTableColumn
           prop="resourceId"
           label="条目 ID"
           width="90"
@@ -403,7 +408,8 @@ onMounted(() => {
               "
             />
           </template>
-</ElTableColumn><ElTableColumn
+      </ElTableColumn>
+        <ElTableColumn
           prop="requestedBy"
           label="提交人 ID"
           width="105"
@@ -415,11 +421,8 @@ onMounted(() => {
           <template #default="{ row }">
             <AdminTime :value="row.createdAt" />
           </template>
-</ElTableColumn><!-- @vue-generic {TaxonomyTranslationRequest} --><ElTableColumn
-          v-if="canReviewTranslation"
-          label="复核"
-          width="150"
-        >
+      </ElTableColumn><!-- @vue-generic {TaxonomyTranslationRequest} -->
+        <ElTableColumn v-if="canReviewTranslation" label="复核" width="150">
           <template #default="{ row }">
             <template v-if="row.status === 'pending'">
               <ElButton
@@ -428,7 +431,8 @@ onMounted(() => {
                 @click="reviewTranslation(row, true)"
               >
                 通过
-</ElButton><ElButton
+              </ElButton>
+              <ElButton
                 link
                 type="danger"
                 @click="reviewTranslation(row, false)"
@@ -445,7 +449,8 @@ onMounted(() => {
           @click="previousTranslations"
         >
           上一页
-</ElButton><ElButton :disabled="!translationNextCursor" @click="nextTranslations">
+        </ElButton>
+        <ElButton :disabled="!translationNextCursor" @click="nextTranslations">
           下一页
         </ElButton>
       </div>
@@ -458,11 +463,14 @@ onMounted(() => {
       <ElForm label-width="95px">
         <ElFormItem label="启用">
           <ElSwitch v-model="form.enabled" />
-</ElFormItem><ElFormItem label="排序值">
+        </ElFormItem>
+        <ElFormItem label="排序值">
           <ElInputNumber v-model="form.sortOrder" :min="0" />
         </ElFormItem>
-</ElForm><template #footer>
-        <ElButton @click="editorOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="save">
+      </ElForm>
+      <template #footer>
+        <ElButton @click="editorOpen = false">取消</ElButton>
+        <ElButton :loading="saving" type="primary" @click="save">
           保存
         </ElButton>
       </template>
@@ -485,17 +493,21 @@ onMounted(() => {
             maxlength="64"
             placeholder="小写字母、数字、下划线或连字符"
           />
-</ElFormItem><ElFormItem label="英文名称">
+        </ElFormItem>
+      <ElFormItem label="英文名称">
           <ElInput v-model="createForm.nameEn" maxlength="80" />
-</ElFormItem><ElFormItem label="排序值">
+      </ElFormItem>
+      <ElFormItem label="排序值">
           <ElInputNumber
             v-model="createForm.sortOrder"
             :min="0"
             :max="2147483647"
           />
         </ElFormItem>
-</ElForm><template #footer>
-        <ElButton @click="createOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="saveCreate">
+    </ElForm>
+      <template #footer>
+        <ElButton @click="createOpen = false">取消</ElButton>
+        <ElButton :loading="saving" type="primary" @click="saveCreate">
           创建
         </ElButton>
       </template>
@@ -511,11 +523,14 @@ onMounted(() => {
             v-model="translationForm.languageCode"
             placeholder="如 hi 或 en"
           />
-</ElFormItem><ElFormItem label="翻译名称">
+        </ElFormItem>
+        <ElFormItem label="翻译名称">
           <ElInput v-model="translationForm.name" maxlength="80" />
         </ElFormItem>
-</ElForm><template #footer>
-        <ElButton @click="translationOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="saveTranslation">
+      </ElForm>
+      <template #footer>
+        <ElButton @click="translationOpen = false">取消</ElButton>
+        <ElButton :loading="saving" type="primary" @click="saveTranslation">
           提交复核
         </ElButton>
       </template>

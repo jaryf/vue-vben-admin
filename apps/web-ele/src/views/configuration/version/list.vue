@@ -1,10 +1,23 @@
 <script setup lang="ts">
-import type { ConfigVersion } from '#/api/config-versions';
+import type {ConfigVersion} from '#/api/config-versions';
+import {
+  approveConfigVersion,
+  cancelScheduledConfigVersion,
+  createConfigVersion,
+  editConfigVersion,
+  getConfigVersion,
+  listConfigVersions,
+  publishConfigVersion,
+  rejectConfigVersion,
+  rollbackConfigVersion,
+  scheduleConfigVersion,
+  submitConfigVersion,
+} from '#/api/config-versions';
 
-import { computed, onMounted, reactive, ref } from 'vue';
+import {computed, onMounted, reactive, ref} from 'vue';
 
-import { useAccess } from '@vben/access';
-import { useTimezoneStore, useUserStore } from '@vben/stores';
+import {useAccess} from '@vben/access';
+import {useTimezoneStore, useUserStore} from '@vben/stores';
 
 import {
   ElAlert,
@@ -25,25 +38,11 @@ import {
   ElTableColumn,
   ElTag,
 } from 'element-plus';
-
-import {
-  approveConfigVersion,
-  cancelScheduledConfigVersion,
-  createConfigVersion,
-  editConfigVersion,
-  getConfigVersion,
-  listConfigVersions,
-  publishConfigVersion,
-  rejectConfigVersion,
-  rollbackConfigVersion,
-  scheduleConfigVersion,
-  submitConfigVersion,
-} from '#/api/config-versions';
 import AdminEnumTag from '#/components/admin-enum-tag.vue';
 import AdminPage from '#/components/admin-page.vue';
 import AdminTime from '#/components/admin-time.vue';
-import { adminDateTimeToUtc, utcToAdminDateTime } from '#/utils/admin-datetime';
-import { confirmDialog, promptDialog } from '#/utils/message-box';
+import {adminDateTimeToUtc, utcToAdminDateTime} from '#/utils/admin-datetime';
+import {confirmDialog, promptDialog} from '#/utils/message-box';
 
 const { hasAccessByCodes } = useAccess();
 const userStore = useUserStore();
@@ -600,7 +599,8 @@ onMounted(() => {
       <ElButton v-if="canWrite" type="primary" @click="openEditor()">
         创建草稿
       </ElButton>
-</template><ElCard shadow="never">
+    </template>
+    <ElCard shadow="never">
       <ElAlert
         class="mb-4"
         title="功能开关不能开启基础配置禁用的能力。附加审核词、正则、域名与短链规则在同步消息和异步文字瓶审核中生效，风险阈值用于异步文字瓶供应商评分；固定联系方式和外链规则始终有效。AI 投放默认 0%，单语种最高 20%；目标兴趣、每日时段和单瓶曝光上限也通过版本审批生效。发布与回滚均需异人审批；定时发布最多预约未来 30 天，每种类型只保留一个待发布版本。"
@@ -618,8 +618,10 @@ onMounted(() => {
           <ElOption label="功能开关" value="feature_flags" /><ElOption
             label="审核规则与风险阈值"
             value="moderation_rules"
-          /><ElOption label="AI 投放策略" value="ai_distribution" />
-</ElSelect><ElSelect
+        />
+          <ElOption label="AI 投放策略" value="ai_distribution"/>
+        </ElSelect>
+        <ElSelect
           v-model="status"
           clearable
           placeholder="全部状态"
@@ -635,7 +637,8 @@ onMounted(() => {
             label="已退役"
             value="retired"
           />
-</ElSelect><ElButton type="primary" @click="search">查询</ElButton>
+        </ElSelect>
+        <ElButton type="primary" @click="search">查询</ElButton>
       </div>
       <ElTable v-loading="loading" :data="rows" row-key="versionId">
         <ElTableColumn
@@ -649,7 +652,8 @@ onMounted(() => {
           <template #default="{ row }">
             <AdminEnumTag :value="row.scope" :label="scopeText(row.scope)" />
           </template>
-</ElTableColumn><ElTableColumn
+      </ElTableColumn>
+        <ElTableColumn
           prop="version"
           label="版本"
           min-width="125"
@@ -660,7 +664,8 @@ onMounted(() => {
           <template #default="{ row }">
             <AdminEnumTag :value="row.status" :label="statusText(row.status)" />
           </template>
-</ElTableColumn><ElTableColumn
+      </ElTableColumn>
+        <ElTableColumn
           prop="requestedBy"
           label="申请人"
           width="95"
@@ -675,7 +680,8 @@ onMounted(() => {
           <template #default="{ row }">
             <AdminTime :value="row.scheduledAt" />
           </template>
-</ElTableColumn><ElTableColumn
+      </ElTableColumn>
+        <ElTableColumn
           prop="rollbackOf"
           label="回滚来源"
           width="100"
@@ -687,15 +693,13 @@ onMounted(() => {
           <template #default="{ row }">
             <AdminTime :value="row.updatedAt" />
           </template>
-</ElTableColumn><!-- @vue-generic {ConfigVersion} --><ElTableColumn
-          label="操作"
-          min-width="310"
-          fixed="right"
-        >
+      </ElTableColumn><!-- @vue-generic {ConfigVersion} -->
+        <ElTableColumn fixed="right" label="操作" min-width="310">
           <template #default="{ row }">
             <ElButton link type="primary" @click="openDetail(row)">
               详情
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="
                 canWrite &&
                 row.status === 'draft' &&
@@ -706,7 +710,8 @@ onMounted(() => {
               @click="openEditor(row)"
             >
               编辑
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="
                 canWrite &&
                 row.status === 'draft' &&
@@ -717,7 +722,8 @@ onMounted(() => {
               @click="action(row, 'submit')"
             >
               提交
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="
                 canApprove &&
                 row.status === 'reviewing' &&
@@ -728,7 +734,8 @@ onMounted(() => {
               @click="action(row, 'approve')"
             >
               批准
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="
                 canApprove &&
                 row.status === 'reviewing' &&
@@ -739,28 +746,32 @@ onMounted(() => {
               @click="action(row, 'reject')"
             >
               驳回
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="canPublish && row.status === 'approved'"
               link
               type="success"
               @click="action(row, 'publish')"
             >
               发布
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="canPublish && row.status === 'approved'"
               link
               type="primary"
               @click="action(row, 'schedule')"
             >
               定时发布
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="canPublish && row.status === 'scheduled'"
               link
               type="warning"
               @click="action(row, 'cancel_schedule')"
             >
               取消定时
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="canWrite && ['published', 'retired'].includes(row.status)"
               link
               type="warning"
@@ -774,9 +785,11 @@ onMounted(() => {
       <div class="admin-pagination">
         <ElButton :disabled="cursorStack.length === 0" @click="previous">
           上一页
-</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
+        </ElButton>
+        <ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
       </div>
-</ElCard><ElDrawer
+    </ElCard>
+    <ElDrawer
       v-model="detailOpen"
       title="配置版本详情"
       size="55%"
@@ -788,30 +801,39 @@ onMounted(() => {
             :value="detail.scope"
             :label="scopeText(detail.scope)"
           />
-</ElDescriptionsItem><ElDescriptionsItem label="版本">
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="版本">
           {{ detail.version }}
-</ElDescriptionsItem><ElDescriptionsItem label="状态">
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="状态">
           <AdminEnumTag
             :value="detail.status"
             :label="statusText(detail.status)"
           />
-</ElDescriptionsItem><ElDescriptionsItem label="申请人">
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="申请人">
           {{ detail.requestedBy }}
-</ElDescriptionsItem><ElDescriptionsItem label="审批人">
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="审批人">
           {{ detail.reviewedBy ?? '—' }}
-</ElDescriptionsItem><ElDescriptionsItem label="审批说明">
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="审批说明">
           {{ detail.reviewNote || '—' }}
-</ElDescriptionsItem><ElDescriptionsItem label="定时发布">
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="定时发布">
           <AdminTime :value="detail.scheduledAt" /><span
             v-if="detail.scheduledAt"
             class="ml-2 text-gray-500"
             >UTC {{ detail.scheduledAt }}</span>
-</ElDescriptionsItem><ElDescriptionsItem label="预约人">
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="预约人">
           {{ detail.scheduledBy ?? '—' }}
-</ElDescriptionsItem><ElDescriptionsItem label="回滚来源">
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="回滚来源">
           {{ detail.rollbackOf ?? '—' }}
         </ElDescriptionsItem>
-</ElDescriptions><ElDivider>
+      </ElDescriptions>
+      <ElDivider>
         {{
           detail?.scope === 'feature_flags'
             ? '能力配置'
@@ -819,7 +841,8 @@ onMounted(() => {
               ? '附加审核规则'
               : 'AI 投放规则'
         }}
-</ElDivider><ElDescriptions
+      </ElDivider>
+      <ElDescriptions
         v-if="detail?.scope === 'feature_flags'"
         :column="1"
         border
@@ -850,7 +873,8 @@ onMounted(() => {
         <div class="flex flex-wrap gap-2">
           <ElTag v-for="term in configuredTerms(detail)" :key="term">
             {{ term }}
-</ElTag><span v-if="!configuredTerms(detail).length">无</span>
+          </ElTag>
+          <span v-if="!configuredTerms(detail).length">无</span>
         </div>
         <ElDivider>附加正则</ElDivider>
         <div
@@ -860,14 +884,16 @@ onMounted(() => {
         >
           {{ pattern }}
         </div>
-        <span v-if="!configuredPatterns(detail).length">无</span><ElDivider>附加拦截域名</ElDivider>
+        <span v-if="!configuredPatterns(detail).length">无</span>
+        <ElDivider>附加拦截域名</ElDivider>
         <div class="flex flex-wrap gap-2">
           <ElTag
             v-for="domain in configuredDomains(detail, 'blockedDomains')"
             :key="domain"
           >
             {{ domain }}
-</ElTag><span v-if="!configuredDomains(detail, 'blockedDomains').length">无</span>
+          </ElTag>
+          <span v-if="!configuredDomains(detail, 'blockedDomains').length">无</span>
         </div>
         <ElDivider>短链域名</ElDivider>
         <div class="flex flex-wrap gap-2">
@@ -876,20 +902,21 @@ onMounted(() => {
             :key="domain"
           >
             {{ domain }}
-</ElTag><span v-if="!configuredDomains(detail, 'shortlinkDomains').length">无</span>
+          </ElTag>
+          <span v-if="!configuredDomains(detail, 'shortlinkDomains').length">无</span>
         </div>
-        <ElDivider>风险阈值</ElDivider><ElDescriptions :column="1" border>
+        <ElDivider>风险阈值</ElDivider>
+        <ElDescriptions :column="1" border>
           <ElDescriptionsItem label="中风险起点">
-            {{
-              configuredThresholds(detail)?.medium ?? 0.4
-            }}
-</ElDescriptionsItem><ElDescriptionsItem label="高风险起点">
+            {{ configuredThresholds(detail)?.medium ?? 0.4 }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="高风险起点">
             {{ configuredThresholds(detail)?.high ?? 0.7 }}
-</ElDescriptionsItem><ElDescriptionsItem label="极高风险起点">
-            {{
-              configuredThresholds(detail)?.critical ?? 0.9
-            }}
-</ElDescriptionsItem><ElDescriptionsItem label="低于该分数转人工">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="极高风险起点">
+            {{ configuredThresholds(detail)?.critical ?? 0.9 }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="低于该分数转人工">
             {{ configuredThresholds(detail)?.manualReviewBelow ?? 0.7 }}
           </ElDescriptionsItem>
         </ElDescriptions>
@@ -901,29 +928,32 @@ onMounted(() => {
       >
         <ElDescriptionsItem label="全局最高比例">
           {{ configuredAI(detail)?.maxPercent }}%
-</ElDescriptionsItem><ElDescriptionsItem label="用户灰度比例">
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="用户灰度比例">
           {{ configuredAI(detail)?.rolloutPercent }}%
-</ElDescriptionsItem><ElDescriptionsItem label="语言覆盖">
-          {{
-            JSON.stringify(configuredAI(detail)?.languageOverrides || {})
-          }}
-</ElDescriptionsItem><ElDescriptionsItem label="目标兴趣标签">
-          {{
-            configuredAI(detail)?.targetInterestTagIds?.join('、') || '不限'
-          }}
-</ElDescriptionsItem><ElDescriptionsItem label="每日投放时段">
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="语言覆盖">
+          {{ JSON.stringify(configuredAI(detail)?.languageOverrides || {}) }}
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="目标兴趣标签">
+          {{ configuredAI(detail)?.targetInterestTagIds?.join('、') || '不限' }}
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="每日投放时段">
           {{
             configuredAI(detail)?.dailyWindowStart &&
             configuredAI(detail)?.dailyWindowEnd
               ? `${configuredAI(detail)?.dailyWindowStart}–${configuredAI(detail)?.dailyWindowEnd}（Asia/Kolkata）`
               : '全天'
           }}
-</ElDescriptionsItem><ElDescriptionsItem label="单瓶最大曝光">
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="单瓶最大曝光">
           {{
             configuredAI(detail)?.maxExposurePerBottle ?? '沿用漂流瓶基础上限'
           }}
         </ElDescriptionsItem>
-</ElDescriptions><ElDivider>与当前发布版本对比</ElDivider><ElAlert
+      </ElDescriptions>
+      <ElDivider>与当前发布版本对比</ElDivider>
+      <ElAlert
         v-if="!published"
         type="info"
         title="该类型尚无发布版本；以下列出本次配置值。"
@@ -951,7 +981,8 @@ onMounted(() => {
           min-width="190"
           show-overflow-tooltip
         />
-</ElTable><ElAlert
+    </ElTable>
+      <ElAlert
         v-else
         type="success"
         title="与当前发布版本无字段差异"
@@ -971,17 +1002,13 @@ onMounted(() => {
               value="moderation_rules"
             /><ElOption label="AI 投放策略" value="ai_distribution" />
           </ElSelect>
-</ElFormItem><ElFormItem label="版本号">
-          <ElInput
-            v-model="form.version"
-            placeholder="例如 2026.09.24-1"
-          />
-</ElFormItem><template v-if="form.scope === 'feature_flags'">
-          <ElDivider>能力覆盖</ElDivider><ElFormItem
-            v-for="[name, label] in flags"
-            :key="name"
-            :label="label"
-          >
+        </ElFormItem>
+        <ElFormItem label="版本号">
+          <ElInput v-model="form.version" placeholder="例如 2026.09.24-1"/>
+        </ElFormItem>
+        <template v-if="form.scope === 'feature_flags'">
+          <ElDivider>能力覆盖</ElDivider>
+          <ElFormItem v-for="[name, label] in flags" :key="name" :label="label">
             <ElSelect v-model="form.states[name]">
               <ElOption label="继承基础配置" value="inherit" /><ElOption
                 label="开启（需基础配置支持）"
@@ -989,7 +1016,8 @@ onMounted(() => {
               /><ElOption label="关闭" value="false" />
             </ElSelect>
           </ElFormItem>
-</template><template v-else-if="form.scope === 'moderation_rules'">
+        </template>
+        <template v-else-if="form.scope === 'moderation_rules'">
           <ElFormItem label="拦截词">
             <ElInput
               v-model="form.blockedTerms"
@@ -997,28 +1025,33 @@ onMounted(() => {
               :rows="8"
               placeholder="每行一个拦截词"
             />
-</ElFormItem><ElFormItem label="附加正则">
+          </ElFormItem>
+          <ElFormItem label="附加正则">
             <ElInput
               v-model="form.regexRules"
               type="textarea"
               :rows="8"
               placeholder="每行一条 RE2 正则；固定安全规则始终生效"
             />
-</ElFormItem><ElFormItem label="附加拦截域名">
+          </ElFormItem>
+          <ElFormItem label="附加拦截域名">
             <ElInput
               v-model="form.blockedDomains"
               type="textarea"
               :rows="5"
               placeholder="每行一个域名，如 example.xyz；同时拦截子域名"
             />
-</ElFormItem><ElFormItem label="短链域名">
+          </ElFormItem>
+          <ElFormItem label="短链域名">
             <ElInput
               v-model="form.shortlinkDomains"
               type="textarea"
               :rows="5"
               placeholder="每行一个域名，如 bit.ly；不带协议或路径"
             />
-</ElFormItem><ElDivider>供应商评分阈值</ElDivider><ElFormItem label="中风险起点">
+          </ElFormItem>
+          <ElDivider>供应商评分阈值</ElDivider>
+          <ElFormItem label="中风险起点">
             <ElInputNumber
               v-model="form.riskMedium"
               :min="0.01"
@@ -1026,7 +1059,8 @@ onMounted(() => {
               :step="0.01"
               :precision="2"
             />
-</ElFormItem><ElFormItem label="高风险起点">
+          </ElFormItem>
+          <ElFormItem label="高风险起点">
             <ElInputNumber
               v-model="form.riskHigh"
               :min="0.01"
@@ -1034,7 +1068,8 @@ onMounted(() => {
               :step="0.01"
               :precision="2"
             />
-</ElFormItem><ElFormItem label="极高风险起点">
+          </ElFormItem>
+          <ElFormItem label="极高风险起点">
             <ElInputNumber
               v-model="form.riskCritical"
               :min="0.01"
@@ -1042,7 +1077,8 @@ onMounted(() => {
               :step="0.01"
               :precision="2"
             />
-</ElFormItem><ElFormItem label="低于该分数转人工">
+          </ElFormItem>
+          <ElFormItem label="低于该分数转人工">
             <ElInputNumber
               v-model="form.manualReviewBelow"
               :min="0"
@@ -1051,21 +1087,25 @@ onMounted(() => {
               :precision="2"
             />
           </ElFormItem>
-</template><template v-else>
+        </template>
+        <template v-else>
           <ElFormItem label="最高 AI 比例">
             <ElInputNumber v-model="form.maxPercent" :min="0" :max="20" />
             %
-</ElFormItem><ElFormItem label="用户灰度比例">
+          </ElFormItem>
+          <ElFormItem label="用户灰度比例">
             <ElInputNumber v-model="form.rolloutPercent" :min="0" :max="100" />
             %
-</ElFormItem><ElFormItem label="语言覆盖">
+          </ElFormItem>
+          <ElFormItem label="语言覆盖">
             <ElInput
               v-model="form.languageOverrides"
               type="textarea"
               :rows="8"
               placeholder="每行如 hi=5；未列语言使用全局比例"
             />
-</ElFormItem><ElAlert
+          </ElFormItem>
+          <ElAlert
             title="兴趣标签留空表示不限；每日时段按 Asia/Kolkata 计算，开始含、结束不含，可跨午夜。单瓶最大曝光留空则沿用漂流瓶基础上限。"
             type="info"
             :closable="false"
@@ -1075,25 +1115,30 @@ onMounted(() => {
               v-model="form.targetInterestTagIds"
               placeholder="逗号分隔；用户须命中至少一个"
             />
-</ElFormItem><ElFormItem label="每日开始时间">
+        </ElFormItem>
+          <ElFormItem label="每日开始时间">
             <ElInput
               v-model="form.dailyWindowStart"
               placeholder="HH:mm，留空表示全天"
             />
-</ElFormItem><ElFormItem label="每日结束时间">
+          </ElFormItem>
+          <ElFormItem label="每日结束时间">
             <ElInput
               v-model="form.dailyWindowEnd"
               placeholder="HH:mm，留空表示全天"
             />
-</ElFormItem><ElFormItem label="单瓶最大曝光">
+          </ElFormItem>
+          <ElFormItem label="单瓶最大曝光">
             <ElInput
               v-model="form.maxExposurePerBottle"
               placeholder="累计被捞取次数上限；留空沿用基础上限"
             />
           </ElFormItem>
         </template>
-</ElForm><template #footer>
-        <ElButton @click="editorOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="save">
+      </ElForm>
+      <template #footer>
+        <ElButton @click="editorOpen = false">取消</ElButton>
+        <ElButton :loading="saving" type="primary" @click="save">
           保存草稿
         </ElButton>
       </template>

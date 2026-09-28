@@ -1,10 +1,20 @@
 <script setup lang="ts">
-import type { OrderDetail, ProductRow } from '#/api/commerce';
+import type {OrderDetail, ProductRow} from '#/api/commerce';
+import {
+  getOrder,
+  listCoinLedger,
+  listEntitlementLedger,
+  listOrders,
+  listPayments,
+  listProducts,
+  listSubscriptions,
+  updateProductStatus,
+} from '#/api/commerce';
 
-import { computed, onMounted, reactive, ref } from 'vue';
+import {computed, onMounted, reactive, ref} from 'vue';
 
-import { useAccess } from '@vben/access';
-import { useTimezoneStore } from '@vben/stores';
+import {useAccess} from '@vben/access';
+import {useTimezoneStore} from '@vben/stores';
 
 import {
   ElAlert,
@@ -24,22 +34,11 @@ import {
   ElTabPane,
   ElTabs,
 } from 'element-plus';
-
-import {
-  getOrder,
-  listCoinLedger,
-  listEntitlementLedger,
-  listOrders,
-  listPayments,
-  listProducts,
-  listSubscriptions,
-  updateProductStatus,
-} from '#/api/commerce';
 import AdminEnumTag from '#/components/admin-enum-tag.vue';
 import AdminPage from '#/components/admin-page.vue';
 import AdminTime from '#/components/admin-time.vue';
-import { adminDateTimeRangeToUtc } from '#/utils/admin-datetime';
-import { confirmDialog } from '#/utils/message-box';
+import {adminDateTimeRangeToUtc} from '#/utils/admin-datetime';
+import {confirmDialog} from '#/utils/message-box';
 
 const { hasAccessByCodes } = useAccess();
 const timezoneStore = useTimezoneStore();
@@ -633,7 +632,8 @@ onMounted(() => {
       <div class="admin-pagination">
         <ElButton :disabled="cursorStack.length === 0" @click="previous">
           上一页
-</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
+        </ElButton>
+        <ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
       </div>
     </ElCard>
 
@@ -646,23 +646,29 @@ onMounted(() => {
         <ElDescriptions :column="2" border>
           <ElDescriptionsItem label="订单号">
             {{ detail.order.orderNo }}
-</ElDescriptionsItem><ElDescriptionsItem label="用户 ID">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="用户 ID">
             {{ detail.order.userId }}
-</ElDescriptionsItem><ElDescriptionsItem label="商品">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="商品">
             {{ detail.order.internalCode }}
-</ElDescriptionsItem><ElDescriptionsItem label="状态">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="状态">
             <AdminEnumTag
               :value="detail.order.status"
               :label="statusText(detail.order.status)"
             />
-</ElDescriptionsItem><ElDescriptionsItem label="订单记录金额">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="订单记录金额">
             {{ detail.order.amountMinor }}
             {{ detail.order.currency }}（最小单位）
-</ElDescriptionsItem><ElDescriptionsItem label="商店渠道">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="商店渠道">
             {{ detail.order.paymentChannel }}
           </ElDescriptionsItem>
         </ElDescriptions>
-        <ElDivider>支付交易</ElDivider><ElTable :data="detail.transactions">
+        <ElDivider>支付交易</ElDivider>
+        <ElTable :data="detail.transactions">
           <ElTableColumn prop="transactionId" label="交易 ID" /><ElTableColumn
             prop="transactionType"
             label="类型"
@@ -670,17 +676,20 @@ onMounted(() => {
             <template #default="{ row }">
               <AdminEnumTag :value="row.transactionType" />
             </template>
-</ElTableColumn><ElTableColumn prop="status" label="状态">
+        </ElTableColumn>
+          <ElTableColumn label="状态" prop="status">
             <template #default="{ row }">
               <AdminEnumTag :value="row.status" />
             </template>
-</ElTableColumn><ElTableColumn prop="verifiedAt" label="验证时间">
+          </ElTableColumn>
+          <ElTableColumn label="验证时间" prop="verifiedAt">
             <template #default="{ row }">
               <AdminTime :value="row.verifiedAt" />
             </template>
           </ElTableColumn>
         </ElTable>
-        <ElDivider>权益账本</ElDivider><ElTable :data="detail.entitlementLedger">
+        <ElDivider>权益账本</ElDivider>
+        <ElTable :data="detail.entitlementLedger">
           <ElTableColumn prop="ledgerId" label="流水 ID" /><ElTableColumn
             prop="entitlementType"
             label="权益"
@@ -688,16 +697,20 @@ onMounted(() => {
             <template #default="{ row }">
               <AdminEnumTag :value="row.entitlementType" />
             </template>
-</ElTableColumn><ElTableColumn prop="changeAmount" label="变更" /><ElTableColumn
-            prop="balanceAfter"
-            label="余额"
-          /><ElTableColumn prop="createdAt" label="时间">
+        </ElTableColumn>
+          <ElTableColumn label="变更" prop="changeAmount"/>
+          <ElTableColumn label="余额" prop="balanceAfter"/>
+          <ElTableColumn
+            label="时间"
+            prop="createdAt"
+          >
             <template #default="{ row }">
               <AdminTime :value="row.createdAt" />
             </template>
           </ElTableColumn>
         </ElTable>
-        <ElDivider>金币账本</ElDivider><ElTable :data="detail.coinLedger">
+        <ElDivider>金币账本</ElDivider>
+        <ElTable :data="detail.coinLedger">
           <ElTableColumn prop="ledgerId" label="流水 ID" /><ElTableColumn
             prop="operation"
             label="操作"
@@ -705,10 +718,13 @@ onMounted(() => {
             <template #default="{ row }">
               <AdminEnumTag :value="row.operation" />
             </template>
-</ElTableColumn><ElTableColumn prop="amount" label="数量" /><ElTableColumn
-            prop="balanceAfter"
-            label="余额"
-          /><ElTableColumn prop="createdAt" label="时间">
+        </ElTableColumn>
+          <ElTableColumn label="数量" prop="amount"/>
+          <ElTableColumn label="余额" prop="balanceAfter"/>
+          <ElTableColumn
+            label="时间"
+            prop="createdAt"
+          >
             <template #default="{ row }">
               <AdminTime :value="row.createdAt" />
             </template>
@@ -733,33 +749,37 @@ onMounted(() => {
         <ElDescriptions :column="1" border>
           <ElDescriptionsItem label="内部编码">
             {{ product.internalCode }}
-</ElDescriptionsItem><ElDescriptionsItem label="类型">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="类型">
             {{ product.productType }}
-</ElDescriptionsItem><ElDescriptionsItem label="状态">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="状态">
             <AdminEnumTag
               :value="product.status"
               :label="statusText(product.status)"
             />
-</ElDescriptionsItem><ElDescriptionsItem label="Google Play 商品 ID">
-            {{
-              product.storeProductIds?.googlePlay || '未配置'
-            }}
-</ElDescriptionsItem><ElDescriptionsItem label="App Store 商品 ID">
-            {{
-              product.storeProductIds?.appStore || '未配置'
-            }}
-</ElDescriptionsItem><ElDescriptionsItem label="可用地区">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="Google Play 商品 ID">
+            {{ product.storeProductIds?.googlePlay || '未配置' }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="App Store 商品 ID">
+            {{ product.storeProductIds?.appStore || '未配置' }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="可用地区">
             {{ product.availableRegions?.join('、') }}
-</ElDescriptionsItem><ElDescriptionsItem label="售价">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="售价">
             以商店实时数据为准
           </ElDescriptionsItem>
         </ElDescriptions>
-        <ElDivider>服务端授予权益</ElDivider><ElTable :data="product.entitlements">
+        <ElDivider>服务端授予权益</ElDivider>
+        <ElTable :data="product.entitlements">
           <ElTableColumn prop="grantType" label="授予类型">
             <template #default="{ row }">
               <AdminEnumTag :value="row.grantType" />
             </template>
-</ElTableColumn><ElTableColumn
+          </ElTableColumn>
+          <ElTableColumn
             prop="entitlementCode"
             label="权益代码"
           /><ElTableColumn prop="grantAmount" label="数量" />
@@ -773,13 +793,15 @@ onMounted(() => {
             @click="changeProductStatus('draft')"
           >
             设为草稿
-</ElButton><ElButton
+          </ElButton>
+          <ElButton
             v-if="product.status !== 'published'"
             type="primary"
             @click="changeProductStatus('published')"
           >
             发布
-</ElButton><ElButton
+          </ElButton>
+          <ElButton
             v-if="product.status !== 'retired'"
             @click="changeProductStatus('retired')"
           >

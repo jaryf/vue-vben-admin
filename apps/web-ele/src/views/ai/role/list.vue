@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import type { AIRole } from '#/api/ai';
+import type {AIRole} from '#/api/ai';
+import {changeAIRoleStatus, createAIRole, getAIRole, listAIRoles, updateAIRole,} from '#/api/ai';
 
-import { onMounted, reactive, ref } from 'vue';
+import {onMounted, reactive, ref} from 'vue';
 
 import {
   ElButton,
@@ -18,18 +19,10 @@ import {
   ElTable,
   ElTableColumn,
 } from 'element-plus';
-
-import {
-  changeAIRoleStatus,
-  createAIRole,
-  getAIRole,
-  listAIRoles,
-  updateAIRole,
-} from '#/api/ai';
 import AdminEnumTag from '#/components/admin-enum-tag.vue';
 import AdminPage from '#/components/admin-page.vue';
 import AdminTime from '#/components/admin-time.vue';
-import { confirmDialog } from '#/utils/message-box';
+import {confirmDialog} from '#/utils/message-box';
 
 const rows = ref<AIRole[]>([]);
 const nextCursor = ref<null | string>(null);
@@ -207,7 +200,8 @@ onMounted(() => {
             label="停用"
             value="disabled"
           />
-</ElSelect><ElButton type="primary" @click="search">查询</ElButton>
+        </ElSelect>
+        <ElButton type="primary" @click="search">查询</ElButton>
       </div>
       <ElTable v-loading="loading" :data="rows" row-key="roleId">
         <ElTableColumn prop="roleId" label="角色 ID" width="95" /><ElTableColumn
@@ -221,7 +215,8 @@ onMounted(() => {
           <template #default="{ row }">
             {{ row.avatarMediaId ?? '—' }}
           </template>
-</ElTableColumn><ElTableColumn
+      </ElTableColumn>
+        <ElTableColumn
           prop="persona"
           label="人设"
           min-width="220"
@@ -233,7 +228,8 @@ onMounted(() => {
           <template #default="{ row }">
             {{ row.languages?.join('、') }}
           </template>
-</ElTableColumn><ElTableColumn
+      </ElTableColumn>
+        <ElTableColumn
           prop="dailyMessageLimit"
           label="每日回复上限"
           width="120"
@@ -241,19 +237,18 @@ onMounted(() => {
           <template #default="{ row }">
             <AdminEnumTag :value="row.status" />
           </template>
-</ElTableColumn><!-- @vue-generic {AIRole} --><ElTableColumn
-          prop="createdAt"
-          label="创建时间"
-          min-width="175"
-        >
+      </ElTableColumn><!-- @vue-generic {AIRole} -->
+        <ElTableColumn label="创建时间" min-width="175" prop="createdAt">
           <template #default="{ row }">
             <AdminTime :value="row.createdAt" />
           </template>
-</ElTableColumn><!-- @vue-generic {AIRole} --><ElTableColumn label="操作" width="145">
+        </ElTableColumn><!-- @vue-generic {AIRole} -->
+        <ElTableColumn label="操作" width="145">
           <template #default="{ row }">
             <ElButton link type="primary" @click="openEditor(row)">
               编辑
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               link
               :type="row.status === 'enabled' ? 'warning' : 'success'"
               @click="toggle(row)"
@@ -266,7 +261,8 @@ onMounted(() => {
       <div class="admin-pagination">
         <ElButton :disabled="cursorStack.length === 0" @click="previous">
           上一页
-</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
+        </ElButton>
+        <ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
       </div>
     </ElCard>
     <ElDialog
@@ -334,7 +330,8 @@ onMounted(() => {
         </ElFormItem>
       </ElForm>
       <template #footer>
-        <ElButton @click="editorOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="save">
+        <ElButton @click="editorOpen = false">取消</ElButton>
+        <ElButton :loading="saving" type="primary" @click="save">
           保存
         </ElButton>
       </template>

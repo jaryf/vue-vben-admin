@@ -1,13 +1,13 @@
 <script lang="ts" setup>
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import {onBeforeUnmount, onMounted, ref, watch} from 'vue';
 
-import { useElementPlusDesignTokens } from '@vben/hooks';
-import { useAccessStore } from '@vben/stores';
+import {useElementPlusDesignTokens} from '@vben/hooks';
+import {useAccessStore} from '@vben/stores';
 
-import { ElConfigProvider, ElMessage } from 'element-plus';
+import {ElConfigProvider, ElMessage} from 'element-plus';
 
-import { elementLocale } from '#/locales';
-import { useAuthStore } from '#/store';
+import {elementLocale} from '#/locales';
+import {useAuthStore} from '#/store';
 
 defineOptions({ name: 'App' });
 
@@ -29,11 +29,17 @@ function readActivity() {
     const now = Date.now();
     sessionStorage.setItem(activityStorageKey, String(now));
     return now;
-  } catch { return Date.now(); }
+  } catch {
+    return Date.now();
+  }
 }
 function persistActivity() {
   if (lastActivity - lastPersisted < 10_000) return;
-  try { sessionStorage.setItem(activityStorageKey, String(lastActivity)); } catch { /* Storage may be disabled. */ }
+  try {
+    sessionStorage.setItem(activityStorageKey, String(lastActivity));
+  } catch {
+    /* Storage may be disabled. */
+  }
   lastPersisted = lastActivity;
 }
 function clearTimer() {
@@ -43,7 +49,10 @@ function clearTimer() {
 function scheduleCheck() {
   clearTimer();
   if (accessStore.accessToken && !locking.value) {
-    idleTimer = window.setTimeout(checkIdle, Math.max(0, idleTimeoutMs - (Date.now() - lastActivity)));
+    idleTimer = window.setTimeout(
+      checkIdle,
+      Math.max(0, idleTimeoutMs - (Date.now() - lastActivity)),
+    );
   }
 }
 async function lockIdleSession() {
@@ -70,7 +79,10 @@ function checkIdle() {
 function recordActivity() {
   if (!accessStore.accessToken || locking.value) return;
   const now = Date.now();
-  if (now - lastActivity >= idleTimeoutMs) { void lockIdleSession(); return; }
+  if (now - lastActivity >= idleTimeoutMs) {
+    void lockIdleSession();
+    return;
+  }
   if (now - lastActivity < 1000) return;
   lastActivity = now;
   persistActivity();
@@ -79,21 +91,35 @@ function checkOnReturn() {
   if (document.visibilityState === 'visible') checkIdle();
 }
 
-watch(() => accessStore.accessToken, (token, previous) => {
-  if (!token) {
-    clearTimer();
-    try { sessionStorage.removeItem(activityStorageKey); } catch { /* Storage may be disabled. */ }
-    return;
-  }
-  if (!previous) {
-    lastActivity = readActivity();
-    lastPersisted = lastActivity;
-    checkIdle();
-  }
-}, { immediate: true });
+watch(
+  () => accessStore.accessToken,
+  (token, previous) => {
+    if (!token) {
+      clearTimer();
+      try {
+        sessionStorage.removeItem(activityStorageKey);
+      } catch {
+        /* Storage may be disabled. */
+      }
+      return;
+    }
+    if (!previous) {
+      lastActivity = readActivity();
+      lastPersisted = lastActivity;
+      checkIdle();
+    }
+  },
+  {immediate: true},
+);
 
 onMounted(() => {
-  for (const event of ['pointerdown', 'pointermove', 'keydown', 'touchstart', 'wheel']) {
+  for (const event of [
+    'pointerdown',
+    'pointermove',
+    'keydown',
+    'touchstart',
+    'wheel',
+  ]) {
     window.addEventListener(event, recordActivity, { passive: true });
   }
   window.addEventListener('focus', checkIdle);
@@ -102,7 +128,13 @@ onMounted(() => {
 });
 onBeforeUnmount(() => {
   clearTimer();
-  for (const event of ['pointerdown', 'pointermove', 'keydown', 'touchstart', 'wheel']) {
+  for (const event of [
+    'pointerdown',
+    'pointermove',
+    'keydown',
+    'touchstart',
+    'wheel',
+  ]) {
     window.removeEventListener(event, recordActivity);
   }
   window.removeEventListener('focus', checkIdle);
@@ -114,7 +146,10 @@ onBeforeUnmount(() => {
 <template>
   <ElConfigProvider :locale="elementLocale">
     <RouterView />
-    <div v-if="locking" class="fixed inset-0 z-[99999] flex items-center justify-center bg-white text-center text-base text-gray-700 dark:bg-gray-950 dark:text-gray-200">
+    <div
+      v-if="locking"
+      class="fixed inset-0 z-[99999] flex items-center justify-center bg-white text-center text-base text-gray-700 dark:bg-gray-950 dark:text-gray-200"
+    >
       会话已锁定，正在返回登录页…
     </div>
   </ElConfigProvider>

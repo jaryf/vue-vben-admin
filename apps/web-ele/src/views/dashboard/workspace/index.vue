@@ -4,22 +4,14 @@ import type {
   ExternalCapabilityCode,
   ExternalCapabilityState,
 } from '#/api/dashboard';
+import {getExternalCapabilities} from '#/api/dashboard';
 
-import { onMounted, ref } from 'vue';
+import {onMounted, ref} from 'vue';
 
-import { useUserStore } from '@vben/stores';
+import {useUserStore} from '@vben/stores';
 
-import {
-  ElAlert,
-  ElButton,
-  ElCard,
-  ElEmpty,
-  ElTable,
-  ElTableColumn,
-} from 'element-plus';
-
-import { getExternalCapabilities } from '#/api/dashboard';
-import { requestClient } from '#/api/request';
+import {ElAlert, ElButton, ElCard, ElEmpty, ElTable, ElTableColumn,} from 'element-plus';
+import {requestClient} from '#/api/request';
 import AdminEnumTag from '#/components/admin-enum-tag.vue';
 import AdminPage from '#/components/admin-page.vue';
 import AdminTime from '#/components/admin-time.vue';
@@ -226,9 +218,11 @@ onMounted(refresh);
     <template v-if="overview">
       <div class="workspace-period">
         <div>
-          <span class="workspace-period__label">统计范围</span><AdminTime :value="overview.rangeStart" />
+          <span class="workspace-period__label">统计范围</span>
+          <AdminTime :value="overview.rangeStart"/>
           <span class="workspace-muted">至</span>
-          <AdminTime :value="overview.rangeEnd" /><span class="workspace-muted">（不含结束时刻）</span>
+          <AdminTime :value="overview.rangeEnd"/>
+          <span class="workspace-muted">（不含结束时刻）</span>
         </div>
         <div class="workspace-period__meta">
           <span>时区 {{ overview.timezone }}</span><span>更新于 <AdminTime :value="overview.generatedAt" /></span><span>读取时实时聚合</span>

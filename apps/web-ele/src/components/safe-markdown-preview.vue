@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import {computed} from 'vue';
 
 interface MarkdownBlock {
   items: string[];
@@ -30,7 +30,7 @@ function createBlock(
 function parseMarkdown(source: string): MarkdownBlock[] {
   const blocks: MarkdownBlock[] = [];
   const paragraph: string[] = [];
-  let codeLines: string[] | null = null;
+  let codeLines: null | string[] = null;
   let list: MarkdownBlock | null = null;
 
   const flushParagraph = () => {
@@ -69,10 +69,12 @@ function parseMarkdown(source: string): MarkdownBlock[] {
     if (heading) {
       flushParagraph();
       flushList();
-      blocks.push(createBlock('heading', {
-        level: heading[1]?.length || 1,
-        text: heading[2] || '',
-      }));
+      blocks.push(
+        createBlock('heading', {
+          level: heading[1]?.length || 1,
+          text: heading[2] || '',
+        }),
+      );
       continue;
     }
     if (/^\s*([-*_])(?:\s*\1){2,}\s*$/.test(line)) {
@@ -138,10 +140,7 @@ const blocks = computed(() => parseMarkdown(props.source || ''));
           {{ item }}
         </li>
       </ol>
-      <ul
-        v-else-if="block.kind === 'list'"
-        class="list-disc space-y-1 pl-6"
-      >
+      <ul v-else-if="block.kind === 'list'" class="list-disc space-y-1 pl-6">
         <li v-for="(item, itemIndex) in block.items" :key="itemIndex">
           {{ item }}
         </li>

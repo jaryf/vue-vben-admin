@@ -5,11 +5,20 @@ import type {
   MessageContext,
   MessageRow,
 } from '#/api/conversations';
+import {
+  getConversation,
+  getExtendedMessageContext,
+  getMessageContext,
+  getMessageMediaPreview,
+  listConversations,
+  listMessages,
+  removeMessage,
+} from '#/api/conversations';
 
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import {computed, onBeforeUnmount, onMounted, reactive, ref} from 'vue';
 
-import { useAccess } from '@vben/access';
-import { useTimezoneStore } from '@vben/stores';
+import {useAccess} from '@vben/access';
+import {useTimezoneStore} from '@vben/stores';
 
 import {
   ElAlert,
@@ -27,22 +36,12 @@ import {
   ElTable,
   ElTableColumn,
 } from 'element-plus';
-
-import {
-  getConversation,
-  getExtendedMessageContext,
-  getMessageContext,
-  getMessageMediaPreview,
-  listConversations,
-  listMessages,
-  removeMessage,
-} from '#/api/conversations';
 import AdminEnumTag from '#/components/admin-enum-tag.vue';
 import AdminPage from '#/components/admin-page.vue';
 import AdminTime from '#/components/admin-time.vue';
-import { adminDateTimeRangeToUtc } from '#/utils/admin-datetime';
-import { confirmDialog, promptDialog } from '#/utils/message-box';
-import { validateReasonCode } from '#/utils/reason-code';
+import {adminDateTimeRangeToUtc} from '#/utils/admin-datetime';
+import {confirmDialog, promptDialog} from '#/utils/message-box';
+import {validateReasonCode} from '#/utils/reason-code';
 
 const { hasAccessByCodes } = useAccess();
 const timezoneStore = useTimezoneStore();
@@ -402,11 +401,13 @@ onBeforeUnmount(clearPreview);
           <template #default="{ row }">
             <AdminEnumTag :value="row.type" />
           </template>
-</ElTableColumn><ElTableColumn prop="status" label="状态" width="120">
+      </ElTableColumn>
+        <ElTableColumn label="状态" prop="status" width="120">
           <template #default="{ row }">
             <AdminEnumTag :value="row.status" />
           </template>
-</ElTableColumn><ElTableColumn
+        </ElTableColumn>
+        <ElTableColumn
           prop="sourceBottleId"
           label="来源漂流瓶"
           width="125"
@@ -426,10 +427,8 @@ onBeforeUnmount(clearPreview);
           <template #default="{ row }">
             <AdminTime :value="row.lastMessageAt" />
           </template>
-</ElTableColumn><!-- @vue-generic {ConversationRow} --><ElTableColumn
-          label="操作"
-          width="95"
-        >
+      </ElTableColumn><!-- @vue-generic {ConversationRow} -->
+        <ElTableColumn label="操作" width="95">
           <template #default="{ row }">
             <ElButton link type="primary" @click="openDetail(row)">
               详情
@@ -440,7 +439,8 @@ onBeforeUnmount(clearPreview);
       <div class="admin-pagination">
         <ElButton :disabled="cursorStack.length === 0" @click="previous">
           上一页
-</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
+        </ElButton>
+        <ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
       </div>
     </ElCard>
     <ElCard class="mt-5" shadow="never">
@@ -585,7 +585,8 @@ onBeforeUnmount(clearPreview);
           <template #default="{ row }">
             <ElButton link type="primary" @click="openContext(row)">
               上下文
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="previewable(row)"
               link
               type="primary"
@@ -593,7 +594,8 @@ onBeforeUnmount(clearPreview);
               @click="openPreview(row)"
             >
               预览
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="canRemove && row.status !== 'admin_removed'"
               link
               type="danger"
@@ -610,10 +612,8 @@ onBeforeUnmount(clearPreview);
           @click="previousSearchedMessages"
         >
           上一页
-</ElButton><ElButton
-          :disabled="!searchedNextCursor"
-          @click="nextSearchedMessages"
-        >
+        </ElButton>
+        <ElButton :disabled="!searchedNextCursor" @click="nextSearchedMessages">
           下一页
         </ElButton>
       </div>
@@ -627,41 +627,45 @@ onBeforeUnmount(clearPreview);
       <template v-if="detail">
         <ElDescriptions :column="2" border>
           <ElDescriptionsItem label="类型">
-            <AdminEnumTag
-              :value="detail.conversation.type"
-            />
-</ElDescriptionsItem><ElDescriptionsItem label="状态">
-            <AdminEnumTag
-              :value="detail.conversation.status"
-            />
-</ElDescriptionsItem><ElDescriptionsItem label="消息总数">
-            {{ detail.conversation.messageCount }}
-</ElDescriptionsItem><ElDescriptionsItem label="消息正文">
-            不可用
+            <AdminEnumTag :value="detail.conversation.type"/>
           </ElDescriptionsItem>
-</ElDescriptions><ElDivider>参与者</ElDivider><ElTable :data="detail.members">
+          <ElDescriptionsItem label="状态">
+            <AdminEnumTag :value="detail.conversation.status"/>
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="消息总数">
+            {{ detail.conversation.messageCount }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="消息正文"> 不可用</ElDescriptionsItem>
+        </ElDescriptions>
+        <ElDivider>参与者</ElDivider>
+        <ElTable :data="detail.members">
           <ElTableColumn prop="memberType" label="类型">
             <template #default="{ row }">
               <AdminEnumTag :value="row.memberType" />
             </template>
-</ElTableColumn><ElTableColumn prop="memberId" label="成员 ID" /><ElTableColumn
-            label="显示名称"
-          >
+          </ElTableColumn>
+          <ElTableColumn label="成员 ID" prop="memberId"/>
+          <ElTableColumn label="显示名称">
             <template #default="{ row }">
               {{ row.identity?.displayName || '—' }}
             </template>
-</ElTableColumn><ElTableColumn prop="role" label="角色">
+          </ElTableColumn>
+          <ElTableColumn label="角色" prop="role">
             <template #default="{ row }">
               <AdminEnumTag :value="row.role" />
             </template>
-</ElTableColumn><ElTableColumn prop="status" label="状态">
+          </ElTableColumn>
+          <ElTableColumn label="状态" prop="status">
             <template #default="{ row }">
               <AdminEnumTag :value="row.status" />
             </template>
           </ElTableColumn>
-</ElTable><ElDivider>消息元数据</ElDivider><ElButton type="primary" class="mb-4" @click="openMessages">
+        </ElTable>
+        <ElDivider>消息元数据</ElDivider>
+        <ElButton class="mb-4" type="primary" @click="openMessages">
           填写原因并查看
-</ElButton><ElTable :data="messages">
+        </ElButton>
+        <ElTable :data="messages">
           <ElTableColumn
             prop="sequenceNo"
             label="序号"
@@ -682,22 +686,23 @@ onBeforeUnmount(clearPreview);
             <template #default="{ row }">
               <AdminEnumTag :value="row.status" />
             </template>
-</ElTableColumn><ElTableColumn prop="moderationStatus" label="审核状态" width="120">
+        </ElTableColumn>
+          <ElTableColumn label="审核状态" prop="moderationStatus" width="120">
             <template #default="{ row }">
               <AdminEnumTag :value="row.moderationStatus" />
             </template>
-</ElTableColumn><ElTableColumn prop="createdAt" label="时间" min-width="175">
+          </ElTableColumn>
+          <ElTableColumn label="时间" min-width="175" prop="createdAt">
             <template #default="{ row }">
               <AdminTime :value="row.createdAt" />
             </template>
-</ElTableColumn><!-- @vue-generic {MessageRow} --><ElTableColumn
-            label="操作"
-            width="190"
-          >
+          </ElTableColumn><!-- @vue-generic {MessageRow} -->
+          <ElTableColumn label="操作" width="190">
             <template #default="{ row }">
               <ElButton link type="primary" @click="openContext(row)">
                 上下文
-</ElButton><ElButton
+              </ElButton>
+              <ElButton
                 v-if="previewable(row)"
                 link
                 type="primary"
@@ -705,7 +710,8 @@ onBeforeUnmount(clearPreview);
                 @click="openPreview(row)"
               >
                 预览
-</ElButton><ElButton
+              </ElButton>
+              <ElButton
                 v-if="canRemove && row.status !== 'admin_removed'"
                 link
                 type="danger"
@@ -740,7 +746,8 @@ onBeforeUnmount(clearPreview);
           class="mb-4"
         />
         <div class="mb-4 flex items-center justify-between">
-          <span>当前范围：目标消息前后各 {{ messageContext.windowBefore }} 条</span><ElButton
+          <span>当前范围：目标消息前后各 {{ messageContext.windowBefore }} 条</span>
+          <ElButton
             v-if="canExtended && messageContext.windowBefore === 10"
             type="primary"
             @click="expandContext"
@@ -748,7 +755,8 @@ onBeforeUnmount(clearPreview);
             填写原因并扩大至各 50 条
           </ElButton>
         </div>
-        <ElDivider>前文</ElDivider><ElTable :data="messageContext.before" max-height="300">
+        <ElDivider>前文</ElDivider>
+        <ElTable :data="messageContext.before" max-height="300">
           <ElTableColumn
             prop="sequenceNo"
             label="序号"
@@ -758,26 +766,29 @@ onBeforeUnmount(clearPreview);
             label="类型"
             width="100"
           />
-</ElTable><ElDivider>目标消息</ElDivider><ElDescriptions :column="1" border>
+        </ElTable>
+        <ElDivider>目标消息</ElDivider>
+        <ElDescriptions :column="1" border>
           <ElDescriptionsItem label="消息 ID">
             {{ messageContext.targetMessage.messageId }}
-</ElDescriptionsItem><ElDescriptionsItem label="发送者">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="发送者">
             <AdminEnumTag
               :value="messageContext.targetMessage.senderMemberType"
             />
-            #{{
-              messageContext.targetMessage.senderMemberId
-            }}
-</ElDescriptionsItem><ElDescriptionsItem label="状态">
-            <AdminEnumTag
-              :value="messageContext.targetMessage.status"
-            />
-</ElDescriptionsItem><ElDescriptionsItem label="审核状态">
+            #{{ messageContext.targetMessage.senderMemberId }}
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="状态">
+            <AdminEnumTag :value="messageContext.targetMessage.status"/>
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="审核状态">
             <AdminEnumTag
               :value="messageContext.targetMessage.moderationStatus"
             />
           </ElDescriptionsItem>
-</ElDescriptions><ElDivider>后文</ElDivider><ElTable :data="messageContext.after" max-height="300">
+        </ElDescriptions>
+        <ElDivider>后文</ElDivider>
+        <ElTable :data="messageContext.after" max-height="300">
           <ElTableColumn
             prop="sequenceNo"
             label="序号"

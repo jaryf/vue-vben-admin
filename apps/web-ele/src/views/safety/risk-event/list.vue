@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import type { RiskEvent } from '#/api/risk-events';
+import type {RiskEvent} from '#/api/risk-events';
+import {getRiskEvent, listRiskEvents} from '#/api/risk-events';
 
-import { onMounted, reactive, ref } from 'vue';
+import {onMounted, reactive, ref} from 'vue';
 
-import { useTimezoneStore } from '@vben/stores';
+import {useTimezoneStore} from '@vben/stores';
 
 import {
   ElButton,
@@ -20,12 +21,10 @@ import {
   ElTable,
   ElTableColumn,
 } from 'element-plus';
-
-import { getRiskEvent, listRiskEvents } from '#/api/risk-events';
 import AdminEnumTag from '#/components/admin-enum-tag.vue';
 import AdminPage from '#/components/admin-page.vue';
 import AdminTime from '#/components/admin-time.vue';
-import { adminDateTimeRangeToUtc } from '#/utils/admin-datetime';
+import {adminDateTimeRangeToUtc} from '#/utils/admin-datetime';
 
 const timezoneStore = useTimezoneStore();
 
@@ -157,7 +156,8 @@ onMounted(search);
             :label="label"
             :value="value"
           />
-</ElSelect><ElSelect
+      </ElSelect>
+        <ElSelect
           v-model="filter.severity"
           clearable
           placeholder="全部等级"
@@ -169,7 +169,8 @@ onMounted(search);
             :label="label"
             :value="value"
           />
-</ElSelect><ElSelect
+        </ElSelect>
+        <ElSelect
           v-model="filter.sourceType"
           clearable
           placeholder="全部来源"
@@ -181,7 +182,8 @@ onMounted(search);
             :label="label"
             :value="value"
           />
-</ElSelect><ElInput
+        </ElSelect>
+        <ElInput
           v-model="filter.sourceId"
           placeholder="来源 ID"
           clearable
@@ -198,7 +200,8 @@ onMounted(search);
             :label="label"
             :value="value"
           />
-</ElSelect><ElInput
+      </ElSelect>
+        <ElInput
           v-model="filter.actorId"
           placeholder="操作主体 ID"
           clearable
@@ -229,18 +232,21 @@ onMounted(search);
               :label="eventText(row.eventType)"
             />
           </template>
-</ElTableColumn><ElTableColumn label="等级" width="105">
+      </ElTableColumn>
+        <ElTableColumn label="等级" width="105">
           <template #default="{ row }">
             <AdminEnumTag
               :value="row.severity"
               :label="severityText(row.severity)"
             />
           </template>
-</ElTableColumn><ElTableColumn label="来源" min-width="140">
+        </ElTableColumn>
+        <ElTableColumn label="来源" min-width="140">
           <template #default="{ row }">
             <AdminEnumTag :value="row.sourceType" /> #{{ row.sourceId }}
           </template>
-</ElTableColumn><ElTableColumn
+        </ElTableColumn>
+        <ElTableColumn
           prop="reasonCode"
           label="原因代码"
           min-width="165"
@@ -248,10 +254,8 @@ onMounted(search);
           <template #default="{ row }">
             <AdminTime :value="row.occurredAt" />
           </template>
-</ElTableColumn><!-- @vue-generic {RiskEvent} --><ElTableColumn
-          label="操作"
-          width="85"
-        >
+      </ElTableColumn><!-- @vue-generic {RiskEvent} -->
+        <ElTableColumn label="操作" width="85">
           <template #default="{ row }">
             <ElButton link type="primary" @click="openDetail(row)">
               详情
@@ -262,38 +266,47 @@ onMounted(search);
       <div class="admin-pagination">
         <ElButton :disabled="cursorStack.length === 0" @click="previous">
           上一页
-</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
+        </ElButton>
+        <ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
       </div>
-</ElCard><ElDrawer v-model="detailOpen" title="风险事件详情" size="50%">
+    </ElCard>
+    <ElDrawer v-model="detailOpen" size="50%" title="风险事件详情">
       <ElDescriptions v-if="detail" :column="1" border>
         <ElDescriptionsItem label="事件 ID">
           {{ detail.eventId }}
-</ElDescriptionsItem><ElDescriptionsItem label="用户 ID">
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="用户 ID">
           {{ detail.userId ?? '—' }}
-</ElDescriptionsItem><ElDescriptionsItem label="类型">
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="类型">
           <AdminEnumTag
             :value="detail.eventType"
             :label="eventText(detail.eventType)"
           />
-</ElDescriptionsItem><ElDescriptionsItem label="等级">
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="等级">
           <AdminEnumTag
             :value="detail.severity"
             :label="severityText(detail.severity)"
           />
-</ElDescriptionsItem><ElDescriptionsItem label="来源">
-          <AdminEnumTag :value="detail.sourceType" /> #{{
-            detail.sourceId
-          }}
-</ElDescriptionsItem><ElDescriptionsItem label="操作主体">
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="来源">
+          <AdminEnumTag :value="detail.sourceType"/>
+          #{{ detail.sourceId }}
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="操作主体">
           <AdminEnumTag :value="detail.actorType" /> #{{
             detail.actorId ?? '—'
           }}
-</ElDescriptionsItem><ElDescriptionsItem label="原因代码">
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="原因代码">
           {{ detail.reasonCode }}
-</ElDescriptionsItem><ElDescriptionsItem label="发生时间">
+        </ElDescriptionsItem>
+        <ElDescriptionsItem label="发生时间">
           <AdminTime :value="detail.occurredAt" />
         </ElDescriptionsItem>
-</ElDescriptions><ElDivider>结构化元数据</ElDivider>
+      </ElDescriptions>
+      <ElDivider>结构化元数据</ElDivider>
       <pre v-if="detail" class="whitespace-pre-wrap break-all">{{
         JSON.stringify(detail.metadata, null, 2)
       }}</pre>

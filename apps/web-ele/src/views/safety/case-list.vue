@@ -1,15 +1,19 @@
 <script setup lang="ts">
-import type {
-  AppealCase,
-  AppealDetail,
-  ReportCase,
-  ReportDetail,
+import type {AppealCase, AppealDetail, ReportCase, ReportDetail,} from '#/api/safety-cases';
+import {
+  assignReport,
+  getAppeal,
+  getReport,
+  listAppeals,
+  listReports,
+  resolveAppeal,
+  resolveReport,
 } from '#/api/safety-cases';
 
-import { computed, onMounted, reactive, ref } from 'vue';
+import {computed, onMounted, reactive, ref} from 'vue';
 
-import { useAccess } from '@vben/access';
-import { useTimezoneStore } from '@vben/stores';
+import {useAccess} from '@vben/access';
+import {useTimezoneStore} from '@vben/stores';
 
 import {
   ElAlert,
@@ -31,22 +35,12 @@ import {
   ElTable,
   ElTableColumn,
 } from 'element-plus';
-
-import {
-  assignReport,
-  getAppeal,
-  getReport,
-  listAppeals,
-  listReports,
-  resolveAppeal,
-  resolveReport,
-} from '#/api/safety-cases';
 import AdminEnumTag from '#/components/admin-enum-tag.vue';
 import AdminPage from '#/components/admin-page.vue';
 import AdminTime from '#/components/admin-time.vue';
-import { adminDateTimeRangeToUtc } from '#/utils/admin-datetime';
-import { promptDialog } from '#/utils/message-box';
-import { isValidReasonCode, validateReasonCode } from '#/utils/reason-code';
+import {adminDateTimeRangeToUtc} from '#/utils/admin-datetime';
+import {promptDialog} from '#/utils/message-box';
+import {isValidReasonCode, validateReasonCode} from '#/utils/reason-code';
 
 const props = defineProps<{ kind: 'appeal' | 'report' }>();
 const { hasAccessByCodes } = useAccess();
@@ -366,7 +360,8 @@ onMounted(search);
           <template #default="{ row }">
             <AdminEnumTag :value="row.targetType" />
           </template>
-</ElTableColumn><ElTableColumn prop="targetId" label="目标 ID" min-width="140" />
+        </ElTableColumn>
+        <ElTableColumn label="目标 ID" min-width="140" prop="targetId"/>
         <ElTableColumn
           v-if="isReport"
           prop="reasonCode"
@@ -410,14 +405,16 @@ onMounted(search);
               @click="openDetail(row)"
             >
               证据
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="canAssign"
               link
               type="primary"
               @click="openAssign(row as ReportCase)"
             >
               分派
-</ElButton><ElButton
+            </ElButton>
+            <ElButton
               v-if="
                 canResolve &&
                 ['submitted', 'triaging', 'reviewing'].includes(row.status)
@@ -434,7 +431,8 @@ onMounted(search);
       <div class="admin-pagination">
         <ElButton :disabled="cursorStack.length === 0" @click="previous">
           上一页
-</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
+        </ElButton>
+        <ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
       </div>
     </ElCard>
     <ElDrawer
@@ -451,7 +449,8 @@ onMounted(search);
                 ? detail.report.reportId
                 : detail.appeal.appealId
             }}
-</ElDescriptionsItem><ElDescriptionsItem label="状态">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="状态">
             <AdminEnumTag
               :value="
                 'report' in detail ? detail.report.status : detail.appeal.status
@@ -464,15 +463,18 @@ onMounted(search);
                 )
               "
             />
-</ElDescriptionsItem><ElDescriptionsItem label="描述">
+          </ElDescriptionsItem>
+          <ElDescriptionsItem label="描述">
             {{
               'report' in detail
                 ? detail.report.description || '—'
                 : detail.description || '—'
             }}
           </ElDescriptionsItem>
-</ElDescriptions><template v-if="'report' in detail">
-          <ElDivider>保留中的证据快照</ElDivider><ElTable :data="detail.evidence">
+        </ElDescriptions>
+        <template v-if="'report' in detail">
+          <ElDivider>保留中的证据快照</ElDivider>
+          <ElTable :data="detail.evidence">
             <ElTableColumn
               prop="evidenceId"
               label="证据 ID"
@@ -481,19 +483,22 @@ onMounted(search);
               <template #default="{ row }">
                 <AdminEnumTag :value="row.evidenceType" />
               </template>
-</ElTableColumn><ElTableColumn label="快照" min-width="260">
+          </ElTableColumn>
+            <ElTableColumn label="快照" min-width="260">
               <template #default="{ row }">
                 <pre class="whitespace-pre-wrap break-all">{{
                   snapshotText(row.snapshot)
                 }}</pre>
               </template>
-</ElTableColumn><ElTableColumn prop="retentionUntil" label="保留至" width="170">
+            </ElTableColumn>
+            <ElTableColumn label="保留至" prop="retentionUntil" width="170">
               <template #default="{ row }">
                 <AdminTime :value="row.retentionUntil" />
               </template>
             </ElTableColumn>
           </ElTable>
-</template><template v-else>
+        </template>
+        <template v-else>
           <ElDivider>证据媒体 ID</ElDivider>
           <div>{{ detail.evidenceMediaIds.join('、') || '无' }}</div>
         </template>
@@ -502,11 +507,9 @@ onMounted(search);
     <ElDialog v-model="assignOpen" title="分派举报" width="500px">
       <ElForm label-width="120px">
         <ElFormItem label="管理员 ID">
-          <ElInputNumber
-            v-model="assignment.assignedAdminId"
-            :min="1"
-          />
-</ElFormItem><ElFormItem label="优先级">
+          <ElInputNumber v-model="assignment.assignedAdminId" :min="1"/>
+        </ElFormItem>
+        <ElFormItem label="优先级">
           <ElSelect v-model="assignment.priority">
             <ElOption label="低" value="low" /><ElOption
               label="普通"
@@ -517,8 +520,10 @@ onMounted(search);
             />
           </ElSelect>
         </ElFormItem>
-</ElForm><template #footer>
-        <ElButton @click="assignOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="saveAssign">
+      </ElForm>
+      <template #footer>
+        <ElButton @click="assignOpen = false">取消</ElButton>
+        <ElButton :loading="saving" type="primary" @click="saveAssign">
           分派
         </ElButton>
       </template>
@@ -535,15 +540,18 @@ onMounted(search);
               <ElOption label="属实" value="valid" /><ElOption
                 label="不成立"
                 value="invalid"
-              /><ElOption label="重复案件" value="duplicate" />
-</template><template v-else>
+            />
+              <ElOption label="重复案件" value="duplicate"/>
+            </template>
+            <template v-else>
               <ElOption label="通过" value="approve" /><ElOption
                 label="驳回"
                 value="reject"
               /><ElOption label="重复案件" value="duplicate" />
             </template>
           </ElSelect>
-</ElFormItem><ElFormItem label="原因代码">
+        </ElFormItem>
+        <ElFormItem label="原因代码">
           <ElInput
             v-model="resolution.resolutionCode"
             maxlength="64"
@@ -551,8 +559,10 @@ onMounted(search);
             placeholder="稳定原因代码，1–64 位"
           />
         </ElFormItem>
-</ElForm><template #footer>
-        <ElButton @click="resolveOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="saveResolve">
+      </ElForm>
+      <template #footer>
+        <ElButton @click="resolveOpen = false">取消</ElButton>
+        <ElButton :loading="saving" type="primary" @click="saveResolve">
           确认处理
         </ElButton>
       </template>

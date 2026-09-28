@@ -1,5 +1,9 @@
 {
   "title": "AI 内容",
-  "role": {"title": "AI 角色"},
-  "generation": {"title": "生成与回复任务"}
+  "role": {
+    "title": "AI 角色"
+  },
+  "generation": {
+    "title": "生成与回复任务"
+  }
 }

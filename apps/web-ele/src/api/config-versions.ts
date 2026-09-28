@@ -1,15 +1,42 @@
-import { requestClient } from '#/api/request';
+import type {CursorPage} from './app-users';
 
-import type { CursorPage } from './app-users';
+import {requestClient} from '#/api/request';
 
 export interface ConfigVersion {
   versionId: number;
   scope: 'ai_distribution' | 'feature_flags' | 'moderation_rules';
   version: string;
   schemaVersion: number;
-  payload: { flags: Record<string, boolean> } | { blockedTerms?: string[]; regexRules?: string[]; blockedDomains?: string[]; shortlinkDomains?: string[]; riskThresholds?: { medium: number; high: number; critical: number; manualReviewBelow: number } } |
-    { maxPercent: number; rolloutPercent: number; languageOverrides?: Record<string, number>; targetInterestTagIds?: number[]; dailyWindowStart?: string; dailyWindowEnd?: string; maxExposurePerBottle?: number };
-  status: 'draft' | 'reviewing' | 'approved' | 'scheduled' | 'published' | 'retired';
+  payload:
+    | {
+    blockedTerms?: string[];
+    regexRules?: string[];
+    blockedDomains?: string[];
+    shortlinkDomains?: string[];
+    riskThresholds?: {
+      medium: number;
+      high: number;
+      critical: number;
+      manualReviewBelow: number;
+    };
+  }
+    | { flags: Record<string, boolean> }
+    | {
+    maxPercent: number;
+    rolloutPercent: number;
+    languageOverrides?: Record<string, number>;
+    targetInterestTagIds?: number[];
+    dailyWindowStart?: string;
+    dailyWindowEnd?: string;
+    maxExposurePerBottle?: number;
+  };
+  status:
+    | 'approved'
+    | 'draft'
+    | 'published'
+    | 'retired'
+    | 'reviewing'
+    | 'scheduled';
   requestedBy: number;
   reviewedBy: null | number;
   reviewNote: null | string;
@@ -24,18 +51,52 @@ export interface ConfigVersion {
 
 export const listConfigVersions = (params: Record<string, unknown>) =>
   requestClient.get<CursorPage<ConfigVersion>>('/config-versions', { params });
-export const getConfigVersion = (id: number) => requestClient.get<ConfigVersion>(`/config-versions/${id}`);
-export const createConfigVersion = (data: { scope: ConfigVersion['scope']; version: string; payload: ConfigVersion['payload'] }, key: string) =>
-  requestClient.post<ConfigVersion>('/config-versions', data, { headers: { 'Idempotency-Key': key } });
-export const editConfigVersion = (id: number, data: { scope: ConfigVersion['scope']; version: string; payload: ConfigVersion['payload'] }) =>
-  requestClient.request<ConfigVersion>(`/config-versions/${id}`, { method: 'PATCH', data });
-export const submitConfigVersion = (id: number) => requestClient.post<ConfigVersion>(`/config-versions/${id}/submit`);
-export const approveConfigVersion = (id: number, note: string) => requestClient.post<ConfigVersion>(`/config-versions/${id}/approve`, { note });
-export const rejectConfigVersion = (id: number, note: string) => requestClient.post<ConfigVersion>(`/config-versions/${id}/reject`, { note });
-export const publishConfigVersion = (id: number) => requestClient.post<ConfigVersion>(`/config-versions/${id}/publish`);
+export const getConfigVersion = (id: number) =>
+  requestClient.get<ConfigVersion>(`/config-versions/${id}`);
+export const createConfigVersion = (
+  data: {
+    scope: ConfigVersion['scope'];
+    version: string;
+    payload: ConfigVersion['payload'];
+  },
+  key: string,
+) =>
+  requestClient.post<ConfigVersion>('/config-versions', data, {
+    headers: {'Idempotency-Key': key},
+  });
+export const editConfigVersion = (
+  id: number,
+  data: {
+    scope: ConfigVersion['scope'];
+    version: string;
+    payload: ConfigVersion['payload'];
+  },
+) =>
+  requestClient.request<ConfigVersion>(`/config-versions/${id}`, {
+    method: 'PATCH',
+    data,
+  });
+export const submitConfigVersion = (id: number) =>
+  requestClient.post<ConfigVersion>(`/config-versions/${id}/submit`);
+export const approveConfigVersion = (id: number, note: string) =>
+  requestClient.post<ConfigVersion>(`/config-versions/${id}/approve`, {note});
+export const rejectConfigVersion = (id: number, note: string) =>
+  requestClient.post<ConfigVersion>(`/config-versions/${id}/reject`, {note});
+export const publishConfigVersion = (id: number) =>
+  requestClient.post<ConfigVersion>(`/config-versions/${id}/publish`);
 export const scheduleConfigVersion = (id: number, publishAt: string) =>
-  requestClient.post<ConfigVersion>(`/config-versions/${id}/schedule`, { publishAt });
+  requestClient.post<ConfigVersion>(`/config-versions/${id}/schedule`, {
+    publishAt,
+  });
 export const cancelScheduledConfigVersion = (id: number) =>
   requestClient.post<ConfigVersion>(`/config-versions/${id}/cancel-schedule`);
-export const rollbackConfigVersion = (id: number, version: string, key: string) =>
-  requestClient.post<ConfigVersion>(`/config-versions/${id}/rollback`, { version }, { headers: { 'Idempotency-Key': key } });
+export const rollbackConfigVersion = (
+  id: number,
+  version: string,
+  key: string,
+) =>
+  requestClient.post<ConfigVersion>(
+    `/config-versions/${id}/rollback`,
+    {version},
+    {headers: {'Idempotency-Key': key}},
+  );

@@ -1,20 +1,22 @@
 <script lang="ts" setup>
-import { computed, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import {computed, watch} from 'vue';
+import {useRouter} from 'vue-router';
 
-import { useWatermark } from '@vben/hooks';
-import { BasicLayout, UserDropdown } from '@vben/layouts';
-import { preferences, usePreferences } from '@vben/preferences';
-import { useUserStore } from '@vben/stores';
+import {useWatermark} from '@vben/hooks';
+import {BasicLayout, UserDropdown} from '@vben/layouts';
+import {preferences, usePreferences} from '@vben/preferences';
+import {useUserStore} from '@vben/stores';
 
-import { useAuthStore } from '#/store';
+import {useAuthStore} from '#/store';
 
 const router = useRouter();
 const userStore = useUserStore();
 const authStore = useAuthStore();
 const { destroyWatermark, updateWatermark } = useWatermark();
 const { isDark } = usePreferences();
-const avatar = computed(() => userStore.userInfo?.avatar ?? preferences.app.defaultAvatar);
+const avatar = computed(
+  () => userStore.userInfo?.avatar ?? preferences.app.defaultAvatar,
+);
 const menus = computed(() => [
   {
     handler: () => router.push({ name: 'ProfileSettings' }),
@@ -49,7 +51,9 @@ watch(
         ],
         type: 'linear',
       },
-      content: content || `${userStore.userInfo?.username} - ${userStore.userInfo?.realName}`,
+      content:
+        content ||
+        `${userStore.userInfo?.username} - ${userStore.userInfo?.realName}`,
     });
   },
   { immediate: true },

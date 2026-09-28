@@ -31,8 +31,9 @@ function hasAlternativeInstant(
   ) {
     if (offsetMs === 0) continue;
     if (
-      dayjs(instantMs + offsetMs).tz(timezone).format(ADMIN_DATETIME_FORMAT) ===
-      normalized
+      dayjs(instantMs + offsetMs)
+        .tz(timezone)
+        .format(ADMIN_DATETIME_FORMAT) === normalized
     ) {
       return true;
     }
@@ -48,7 +49,10 @@ function parseAdminDateTime(value: string, timezone: string) {
   }
   const parsed = dayjs.tz(normalized, ADMIN_DATETIME_FORMAT, timezone);
   // DST 跳变期间不存在的本地时间会被 dayjs 自动平移，必须拒绝这种隐式转换。
-  if (!parsed.isValid() || parsed.format(ADMIN_DATETIME_FORMAT) !== normalized) {
+  if (
+    !parsed.isValid() ||
+    parsed.format(ADMIN_DATETIME_FORMAT) !== normalized
+  ) {
     throw new Error(`该时刻在时区 ${timezone} 中不存在`);
   }
   // DST 回拨可能让同一个墙上时间对应两个 UTC 时刻；当前输入没有偏移量，禁止静默选取其中一个。
@@ -58,17 +62,17 @@ function parseAdminDateTime(value: string, timezone: string) {
   return parsed;
 }
 
-function adminDateTimeToUtc(value: null | string | undefined, timezone: string) {
+function adminDateTimeToUtc(
+  value: null | string | undefined,
+  timezone: string,
+) {
   if (!value?.trim()) return undefined;
   return parseAdminDateTime(value, timezone)
     .utc()
     .format('YYYY-MM-DDTHH:mm:ss.SSS[Z]');
 }
 
-function utcToAdminDateTime(
-  value: Date | number | string,
-  timezone: string,
-) {
+function utcToAdminDateTime(value: Date | number | string, timezone: string) {
   assertTimezone(timezone);
   const parsed = dayjs(value);
   if (!parsed.isValid()) throw new Error('无法解析日期时间');

@@ -1,10 +1,20 @@
 <script setup lang="ts">
-import type { BottleContent, BottleDetail, BottleRow } from '#/api/bottles';
+import type {BottleContent, BottleDetail, BottleRow} from '#/api/bottles';
+import {
+  getBottle,
+  getBottleContent,
+  getBottleVoicePreview,
+  listBottleMatches,
+  listBottles,
+  removeBottle,
+  restoreBottle,
+  retryBottleReview,
+} from '#/api/bottles';
 
-import { computed, onBeforeUnmount, onMounted, reactive, ref } from 'vue';
+import {computed, onBeforeUnmount, onMounted, reactive, ref} from 'vue';
 
-import { useAccess } from '@vben/access';
-import { useTimezoneStore } from '@vben/stores';
+import {useAccess} from '@vben/access';
+import {useTimezoneStore} from '@vben/stores';
 
 import {
   ElAlert,
@@ -25,23 +35,12 @@ import {
   ElTabs,
   ElTag,
 } from 'element-plus';
-
-import {
-  getBottle,
-  getBottleContent,
-  getBottleVoicePreview,
-  listBottleMatches,
-  listBottles,
-  removeBottle,
-  restoreBottle,
-  retryBottleReview,
-} from '#/api/bottles';
 import AdminEnumTag from '#/components/admin-enum-tag.vue';
 import AdminPage from '#/components/admin-page.vue';
 import AdminTime from '#/components/admin-time.vue';
-import { adminDateTimeRangeToUtc } from '#/utils/admin-datetime';
-import { promptDialog } from '#/utils/message-box';
-import { validateReasonCode } from '#/utils/reason-code';
+import {adminDateTimeRangeToUtc} from '#/utils/admin-datetime';
+import {promptDialog} from '#/utils/message-box';
+import {validateReasonCode} from '#/utils/reason-code';
 
 const { hasAccessByCodes } = useAccess();
 const timezoneStore = useTimezoneStore();
@@ -499,7 +498,8 @@ onBeforeUnmount(clearVoicePreview);
       <div class="admin-pagination">
         <ElButton :disabled="cursorStack.length === 0" @click="previous">
           上一页
-</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
+        </ElButton>
+        <ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
       </div>
     </ElCard>
 
@@ -547,52 +547,60 @@ onBeforeUnmount(clearVoicePreview);
             <ElDescriptions :column="2" border>
               <ElDescriptionsItem label="发布者">
                 {{ detail.bottle.ownerUserId || '匿名' }}
-</ElDescriptionsItem><ElDescriptionsItem label="来源">
+              </ElDescriptionsItem>
+              <ElDescriptionsItem label="来源">
                 <AdminEnumTag
                   :value="detail.bottle.sourceType"
                   :label="sourceText(detail.bottle.sourceType)"
                 />
-</ElDescriptionsItem><ElDescriptionsItem label="状态">
+              </ElDescriptionsItem>
+              <ElDescriptionsItem label="状态">
                 <AdminEnumTag
                   :value="detail.bottle.status"
                   :label="statusText(detail.bottle.status)"
                 />
-</ElDescriptionsItem><ElDescriptionsItem label="审核">
+              </ElDescriptionsItem>
+              <ElDescriptionsItem label="审核">
                 <AdminEnumTag
                   :value="detail.bottle.reviewStatus"
                   :label="reviewStatusText(detail.bottle.reviewStatus)"
                 />
-</ElDescriptionsItem><ElDescriptionsItem label="分类 ID">
+              </ElDescriptionsItem>
+              <ElDescriptionsItem label="分类 ID">
                 {{ detail.bottle.categoryId }}
-</ElDescriptionsItem><ElDescriptionsItem label="语言">
+              </ElDescriptionsItem>
+              <ElDescriptionsItem label="语言">
                 {{ detail.bottle.languageCode }}
-</ElDescriptionsItem><ElDescriptionsItem label="语音时长">
-                {{
-                  durationText(detail.bottle.voiceDurationMs)
-                }}
-</ElDescriptionsItem><ElDescriptionsItem label="已获取/上限">
+              </ElDescriptionsItem>
+              <ElDescriptionsItem label="语音时长">
+                {{ durationText(detail.bottle.voiceDurationMs) }}
+              </ElDescriptionsItem>
+              <ElDescriptionsItem label="已获取/上限">
                 {{ detail.bottle.pickedCount }} /
                 {{ detail.bottle.maxPickCount }}
-</ElDescriptionsItem><ElDescriptionsItem label="会话 / 举报">
+              </ElDescriptionsItem>
+              <ElDescriptionsItem label="会话 / 举报">
                 {{ detail.bottle.conversationCount }} /
                 {{ detail.bottle.reportCount }}
-</ElDescriptionsItem><ElDescriptionsItem label="过期时间">
+              </ElDescriptionsItem>
+              <ElDescriptionsItem label="过期时间">
                 <AdminTime :value="detail.bottle.expiresAt" />
               </ElDescriptionsItem>
             </ElDescriptions>
-            <ElDivider>状态记录</ElDivider><ElTable :data="detail.statusLogs">
+            <ElDivider>状态记录</ElDivider>
+            <ElTable :data="detail.statusLogs">
               <ElTableColumn prop="fromStatus" label="原状态">
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.fromStatus" />
                 </template>
-</ElTableColumn><ElTableColumn prop="toStatus" label="新状态">
+              </ElTableColumn>
+              <ElTableColumn label="新状态" prop="toStatus">
                 <template #default="{ row }">
                   <AdminEnumTag :value="row.toStatus" />
                 </template>
-</ElTableColumn><ElTableColumn prop="reasonCode" label="原因" /><ElTableColumn
-                prop="createdAt"
-                label="时间"
-              >
+              </ElTableColumn>
+              <ElTableColumn label="原因" prop="reasonCode"/>
+              <ElTableColumn label="时间" prop="createdAt">
                 <template #default="{ row }">
                   <AdminTime :value="row.createdAt" />
                 </template>
@@ -636,7 +644,8 @@ onBeforeUnmount(clearVoicePreview);
                   {{ content.voice?.durationMs ?? '—' }}
                 </ElDescriptionsItem>
                 <ElDescriptionsItem label="转写">
-                  <ElTag type="info">能力未接通</ElTag><span class="ml-2">当前无语音转写文本</span>
+                  <ElTag type="info">能力未接通</ElTag>
+                  <span class="ml-2">当前无语音转写文本</span>
                 </ElDescriptionsItem>
               </ElDescriptions>
               <ElButton

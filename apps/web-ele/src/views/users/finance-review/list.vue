@@ -4,10 +4,16 @@ import type {
   FinanceReviewActionInput,
   FinanceReviewCase,
 } from '#/api/finance-reviews';
+import {
+  createFinanceReviewAction,
+  getFinanceReview,
+  listFinanceReviewActions,
+  listFinanceReviews,
+} from '#/api/finance-reviews';
 
-import { computed, onMounted, reactive, ref } from 'vue';
+import {computed, onMounted, reactive, ref} from 'vue';
 
-import { useAccess } from '@vben/access';
+import {useAccess} from '@vben/access';
 
 import {
   ElAlert,
@@ -29,18 +35,11 @@ import {
   ElTimeline,
   ElTimelineItem,
 } from 'element-plus';
-
-import {
-  createFinanceReviewAction,
-  getFinanceReview,
-  listFinanceReviewActions,
-  listFinanceReviews,
-} from '#/api/finance-reviews';
 import AdminEnumTag from '#/components/admin-enum-tag.vue';
 import AdminPage from '#/components/admin-page.vue';
 import AdminTime from '#/components/admin-time.vue';
-import { promptDialog } from '#/utils/message-box';
-import { validateReasonCode } from '#/utils/reason-code';
+import {promptDialog} from '#/utils/message-box';
+import {validateReasonCode} from '#/utils/reason-code';
 
 const { hasAccessByCodes } = useAccess();
 const canManage = computed(() => hasAccessByCodes(['finance_review.manage']));
@@ -285,7 +284,8 @@ onMounted(() => {
       <div class="admin-pagination">
         <ElButton :disabled="cursorStack.length === 0" @click="previous">
           上一页
-</ElButton><ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
+        </ElButton>
+        <ElButton :disabled="!nextCursor" @click="next">下一页</ElButton>
       </div>
     </ElCard>
     <ElDrawer
@@ -418,7 +418,8 @@ onMounted(() => {
         </ElFormItem>
       </ElForm>
       <template #footer>
-        <ElButton @click="actionOpen = false">取消</ElButton><ElButton type="primary" :loading="saving" @click="submitAction">
+        <ElButton @click="actionOpen = false">取消</ElButton>
+        <ElButton :loading="saving" type="primary" @click="submitAction">
           保存记录
         </ElButton>
       </template>
